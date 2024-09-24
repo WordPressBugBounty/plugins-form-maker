@@ -14,7 +14,6 @@ class  FMViewSubmissions_fm extends FMAdminView {
     if ( $fm_settings['fm_developer_mode'] ) {
       wp_enqueue_style(WDFMInstance(self::PLUGIN)->handle_prefix . '-tables');
       wp_enqueue_style(WDFMInstance(self::PLUGIN)->handle_prefix . '-jquery-ui');
-      wp_enqueue_style('jquery.fancybox');
     }
     wp_enqueue_script('thickbox');
     wp_enqueue_script('jquery');
@@ -37,7 +36,6 @@ class  FMViewSubmissions_fm extends FMAdminView {
 		wp_enqueue_script(WDFMInstance(self::PLUGIN)->handle_prefix . '-admin');
 		wp_enqueue_script(WDFMInstance(self::PLUGIN)->handle_prefix . '-manage');
 		wp_enqueue_script(WDFMInstance(self::PLUGIN)->handle_prefix . '-submissions');
-		wp_enqueue_script('jquery.fancybox.pack');
 	}
 	else {
 		wp_enqueue_style(WDFMInstance(self::PLUGIN)->handle_prefix . '-submission');
@@ -647,12 +645,8 @@ class  FMViewSubmissions_fm extends FMAdminView {
 													$new_filename = explode('/', $new_file);
 													$new_filename = $new_filename[count($new_filename) - 1];
 													$get_file_type = strstr($new_filename,  ".");
-													if ( $get_file_type == ".jpg" || $get_file_type == ".jpeg" || $get_file_type == ".png" || $get_file_type == ".bmp" || $get_file_type == ".svg" ) {
-														$fm_fancybox_class = "fm_fancybox";
-													} else {
-														$fm_fancybox_class = "";
-													} ?>
-													<a target="_blank" class="<?php echo $fm_fancybox_class;?>" rel="group_<?php echo $www; ?>" href="<?php echo $new_file; ?>"><?php echo $new_filename; ?></a>
+													?>
+													<a target="_blank" rel="group_<?php echo $www; ?>" href="<?php echo $new_file; ?>"><?php echo $new_filename; ?></a>
 													<br />
 													<?php
 												}

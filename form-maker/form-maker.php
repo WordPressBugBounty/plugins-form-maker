@@ -3,7 +3,7 @@
  * Plugin Name: Form Maker
  * Plugin URI: https://10web.io/plugins/wordpress-form-maker/?utm_source=form_maker&utm_medium=free_plugin
  * Description: This plugin is a modern and advanced tool for easy and fast creating of a WordPress Form. The backend interface is intuitive and user friendly which allows users far from scripting and programming to create WordPress Forms.
- * Version: 1.15.27
+ * Version: 1.15.28
  * Author: 10Web Form Builder Team
  * Author URI: https://10web.io/plugins/?utm_source=form_maker&utm_medium=free_plugin 
  * License: GNU/GPLv3 http://www.gnu.org/licenses/gpl-3.0.html
@@ -26,8 +26,8 @@ final class WDFM {
   public $plugin_url = '';
   public $front_urls = array();
   public $main_file = '';
-  public $plugin_version = '1.15.27';
-  public $db_version = '2.15.27';
+  public $plugin_version = '1.15.28';
+  public $db_version = '2.15.28';
   public $menu_postfix = '_fm';
   public $plugin_postfix = '';
   public $handle_prefix = 'fm';
@@ -663,9 +663,6 @@ final class WDFM {
     // Roboto font for top bar.
     wp_register_style($this->handle_prefix . '-roboto', 'https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap');
 
-    if ( !$this->is_free ) {
-      wp_register_style('jquery.fancybox', $this->plugin_url . '/js/fancybox/jquery.fancybox.css', array(), '3.5.7');
-    }
     // Admin scripts.
     $localize_key_all = $this->handle_prefix . '-admin';
     $localize_key_manage = $this->handle_prefix . '-manage';
@@ -821,19 +818,17 @@ final class WDFM {
     wp_register_script($this->handle_prefix . '-ng-js', 'https://ajax.googleapis.com/ajax/libs/angularjs/1.5.0/angular.min.js', array(), '1.5.0');
     wp_register_script($this->handle_prefix . '-theme-edit-ng', $this->plugin_url . '/js/fm-theme-edit-ng.js', array(), $this->plugin_version);
 
-    if (!$this->is_free) {
-      wp_register_script('jquery.fancybox.pack', $this->plugin_url . '/js/fancybox/jquery.fancybox.pack.js', array(), '3.5.7');
-    } else {
-      wp_register_style($this->handle_prefix . '-deactivate-css', $this->plugin_url . '/wd/assets/css/deactivate_popup.css', array(), $this->plugin_version);
-      wp_register_script($this->handle_prefix . '-deactivate-popup', $this->plugin_url . '/wd/assets/js/deactivate_popup.js', array(), $this->plugin_version, true);
-      $admin_data = wp_get_current_user();
-      wp_localize_script($this->handle_prefix . '-deactivate-popup', ($this->is_free == 2 ? 'cfmWDDeactivateVars' : 'fmWDDeactivateVars'), array(
-        "prefix" => "fm",
-        "deactivate_class" => 'fm_deactivate_link',
-        "email" => $admin_data->data->user_email,
-        "plugin_wd_url" => "https://10web.io/plugins/wordpress-form-maker/?utm_source=form_maker&utm_medium=free_plugin",
-      ));
-    }
+
+    wp_register_style($this->handle_prefix . '-deactivate-css', $this->plugin_url . '/wd/assets/css/deactivate_popup.css', array(), $this->plugin_version);
+    wp_register_script($this->handle_prefix . '-deactivate-popup', $this->plugin_url . '/wd/assets/js/deactivate_popup.js', array(), $this->plugin_version, true);
+    $admin_data = wp_get_current_user();
+    wp_localize_script($this->handle_prefix . '-deactivate-popup', ($this->is_free == 2 ? 'cfmWDDeactivateVars' : 'fmWDDeactivateVars'), array(
+    "prefix" => "fm",
+    "deactivate_class" => 'fm_deactivate_link',
+    "email" => $admin_data->data->user_email,
+    "plugin_wd_url" => "https://10web.io/plugins/wordpress-form-maker/?utm_source=form_maker&utm_medium=free_plugin",
+    ));
+
     wp_register_style($this->handle_prefix . '-topbar', $this->plugin_url . '/css/topbar.css', array(), $this->plugin_version);
     wp_register_style($this->handle_prefix . '-icons', $this->plugin_url . '/css/fonts.css', array(), '1.0.1');
 

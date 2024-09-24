@@ -13217,7 +13217,8 @@ function create_hidden_name(i, w_name) {
 }
 
 function change_field_name(id, x) {
-  value = x.value;
+  var value = x.value;
+  value = value.replace(/[^a-zA-Z0-9-_]/g, '');
   if (value == parseInt(value)) {
     alert('The name of the field cannot be a number.');
     x.value = "";
@@ -13244,6 +13245,7 @@ function create_hidden_value(i, w_value) {
 }
 
 function change_field_value(id, value) {
+  value = value.replace(/[<>"()]/g, '');
   document.getElementById(id + '_elementform_id_temp').value = value;
   document.getElementById(id + '_hidden_valueform_id_temp').innerHTML = value;
 }
