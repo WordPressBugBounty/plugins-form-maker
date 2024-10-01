@@ -507,7 +507,7 @@ class FMViewForm_maker {
               $classes[] = 'wd-block';
             }
 
-            $rep .= '<div class="' . esc_html(implode(' ', $classes)) . '" style="width: ' . intval($param['w_size']) . 'px;">
+            $rep .= '<div class="' . esc_html(implode(' ', $classes)) . '" style="width: ' . esc_attr($param['w_size']) . 'px;">
               <input type="text"
                      class="wd-width-100"
                      id="wdform_' . $id1 . '_element' . $form_id . '"
@@ -661,8 +661,8 @@ class FMViewForm_maker {
                       name="wdform_' . $id1 . '_element' . $form_id . '"
                       placeholder="' . $param['w_title']. '"
                       data-value="' . esc_html($textarea_value) . '"
-                      maxlength="' . intval($param['w_characters_limit']). '"
-                      style="height: ' . intval($param['w_size_h']) . 'px;"
+                      maxlength="' . esc_attr($param['w_characters_limit']). '"
+                      style="height: ' . esc_attr($param['w_size_h']) . 'px;"
                       ' . esc_html($param['attributes']) . '>' . esc_html($textarea_value) . '</textarea>';
 
             // Generate field.
