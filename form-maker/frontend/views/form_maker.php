@@ -201,7 +201,7 @@ class FMViewForm_maker {
             ' . $row->header_title . '
           </div>
           <div class="fm-header-description">
-            ' . do_shortcode($row->header_description) . '
+            ' . do_shortcode(wp_kses_post($row->header_description)) . '
           </div>
         </div>';
             }
@@ -289,7 +289,7 @@ class FMViewForm_maker {
               $param[$params_name] = esc_html($temp[0]);
               $temp = $temp[1];
             }
-            $rep = '<div type="type_editor" class="wdform-field">' . html_entity_decode(do_shortcode($param['w_editor'])) . '</div>';
+            $rep = '<div type="type_editor" class="wdform-field">' . html_entity_decode(do_shortcode(wp_kses_post($param['w_editor']))) . '</div>';
             break;
           }
           case 'type_send_copy': {
@@ -1812,7 +1812,7 @@ class FMViewForm_maker {
                   ' . $row->header_title . '
                 </div>
                 <div class="fm-header-description">
-                  ' . do_shortcode($row->header_description) . '
+                  ' . do_shortcode(wp_kses_post($row->header_description)) . '
                 </div>
               </div>';
           }

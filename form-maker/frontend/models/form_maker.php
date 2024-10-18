@@ -3006,7 +3006,7 @@ class FMModelForm_maker {
     $adminemail = get_option( 'admin_email' );
     $current_page_url = WDW_FM_Library(self::PLUGIN)->get_current_page_url();
     $formtitle = $row->title;
-    $submit_text = do_shortcode($row->submit_text);
+    $submit_text = do_shortcode(wp_kses_post($row->submit_text));
 
     $label_type = array();
     $label_order_original = array();
@@ -4213,12 +4213,12 @@ class FMModelForm_maker {
     if ( $row->mail_mode_user ) {
       $content_type = "text/html";
       $list_user = wordwrap( $list, 100, "\n" );
-	    $new_script = wpautop( do_shortcode(  $row->script_mail_user  ));
+	    $new_script = wpautop( do_shortcode( wp_kses_post($row->script_mail_user) ));
     }
     else {
       $content_type = "text/plain";
       $list_user = wordwrap( $list_text_mode, 1000, "\n" );
-	    $new_script = do_shortcode(  $row->script_mail_user  );
+	    $new_script = do_shortcode( wp_kses_post($row->script_mail_user) );
     }
 
     foreach ( $label_order_original as $key => $label_each ) {
@@ -4412,13 +4412,13 @@ class FMModelForm_maker {
       if ( $row->mail_mode ) {
         $content_type = "text/html";
         $list = wordwrap( $list, 100, "\n", TRUE );
-	      $new_script = wpautop( do_shortcode(  $row->script_mail  ));
+	      $new_script = wpautop( do_shortcode( wp_kses_post($row->script_mail) ));
       }
       else {
         $content_type = "text/plain";
         $list = $list_text_mode;
         $list = wordwrap( $list, 1000, "\n", TRUE );
-	      $new_script = do_shortcode(  $row->script_mail  );
+	      $new_script = do_shortcode( wp_kses_post($row->script_mail) );
       }
 
       $header_arr = array();

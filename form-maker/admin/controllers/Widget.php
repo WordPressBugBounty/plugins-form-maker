@@ -39,8 +39,8 @@ class FMControllerWidget extends WP_Widget {
     }
     $contact_form_forms = explode(',', get_option('contact_form_forms'));
 
-    $instance['title'] = isset($instance['title']) ? $instance['title'] : '';
-    $instance['form_id'] = isset($instance['form_id']) ? $instance['form_id'] : 0;
+    $instance['title'] = isset($instance['title']) ? esc_html($instance['title']) : '';
+    $instance['form_id'] = isset($instance['form_id']) ? intval($instance['form_id']) : 0;
 
     if ( !WDFMInstance(self::PLUGIN)->is_free || !in_array($instance['form_id'], $contact_form_forms) ) {
       if ( class_exists('WDFM') ) {

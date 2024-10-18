@@ -44,9 +44,9 @@ class FMViewWidget {
     ?>
     <p>
       <label for="<?php echo $id_title; ?>">Title:</label>
-      <input class="widefat" id="<?php echo $id_title; ?>" name="<?php echo $name_title; ?>" type="text" value="<?php echo $instance['title']; ?>" />
+      <input class="widefat" id="<?php echo $id_title; ?>" name="<?php echo esc_attr($name_title); ?>" type="text" value="<?php echo esc_attr($instance['title']); ?>" />
       <label for="<?php echo $id_form_id; ?>">Select a form:</label>
-      <select class="widefat" name="<?php echo $name_form_id; ?>" id="<?php echo $id_form_id; ?>">
+      <select class="widefat" name="<?php echo esc_attr($name_form_id); ?>" id="<?php echo $id_form_id; ?>">
         <option style="text-align:center" value="0">- Select a Form -</option>
         <?php
         $ids_Form_Maker = $ids_FM;
