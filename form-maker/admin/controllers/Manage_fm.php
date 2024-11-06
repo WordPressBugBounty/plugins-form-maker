@@ -1319,7 +1319,7 @@ class FMControllerManage_fm extends FMAdminController {
 
     $header_title = WDW_FM_Library(self::PLUGIN)->get('header_title', '');
     $header_description = WDW_FM_Library(self::PLUGIN)->get('header_description', '', FALSE);
-    $header_image_url = WDW_FM_Library(self::PLUGIN)->get('header_image_url', '');
+    $header_image_url = WDW_FM_Library(self::PLUGIN)->get('header_image_url', 'sanitize_url');
     $header_image_animation = WDW_FM_Library(self::PLUGIN)->get('header_image_animation', '');
     $header_hide_image = WDW_FM_Library(self::PLUGIN)->get('header_hide_image', 0);
     $header_hide = WDW_FM_Library(self::PLUGIN)->get('header_hide', 1);

@@ -571,7 +571,7 @@ class FMViewManage_fm extends FMAdminView {
                   <div class="wd-box-content">
                     <div class="wd-group">
                       <label class="wd-label" for="header_title"><?php _e('Title', WDFMInstance(self::PLUGIN)->prefix); ?></label>
-                      <input type="text" id="header_title" name="header_title" class="fm-check-change" value="<?php echo $row->header_title; ?>" data-initial-value="<?php echo $row->header_title; ?>" />
+                      <input type="text" id="header_title" name="header_title" class="fm-check-change" value="<?php echo esc_attr($row->header_title); ?>" data-initial-value="<?php echo esc_attr($row->header_title); ?>" />
                     </div>
                     <div class="wd-group" id="description_editor">
                       <label class="wd-label" for="header_description"><?php _e('Description', WDFMInstance(self::PLUGIN)->prefix); ?></label>
@@ -587,7 +587,7 @@ class FMViewManage_fm extends FMAdminView {
                     </div>
                     <div class="wd-group">
                       <label class="wd-label" for="header_image_url"><?php _e('Image', WDFMInstance(self::PLUGIN)->prefix); ?></label>
-                      <input type="text" id="header_image_url" name="header_image_url" class="fm-check-change" value="<?php echo $row->header_image_url; ?>" data-initial-value="<?php echo $row->header_image_url; ?>" />
+                      <input type="text" id="header_image_url" name="header_image_url" class="fm-check-change" value="<?php echo esc_url($row->header_image_url); ?>" data-initial-value="<?php echo esc_url($row->header_image_url); ?>" />
                       <button class="button add-button medium" onclick="fmOpenMediaUploader(event); return false;"><?php _e('Add Image', WDFMInstance(self::PLUGIN)->prefix); ?></button>
                       <?php $header_bg = $row->header_image_url ? 'background-image: url('.$row->header_image_url.'); background-position: center;' : ''; ?>
                       <div id="header_image" class="header_img<?php if (!$row->header_image_url) echo ' fm-hide'; ?>" style="<?php echo $header_bg; ?>">

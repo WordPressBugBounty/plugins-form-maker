@@ -90,7 +90,7 @@ class TenWebNewLibNotices {
                                 <p class="wd-notice-title">' . $admin_display_title . '</p>
                                 <p class="wd-notice-body">' . $admin_display_msg . '</p>
                                 <ul class="wd-notice-body wd-blue">' . $admin_display_link . '</ul>
-                                <a href="' . $query_str . '" class="dashicons dashicons-dismiss"></a>
+                                <a href="' . esc_url($query_str) . '" class="dashicons dashicons-dismiss"></a>
                               </div>';
           }
           else {
@@ -99,7 +99,7 @@ class TenWebNewLibNotices {
             echo '<ul class="notice-body-promo blue">
                                     ' . $admin_display_link . '
                                   </ul>';
-            echo '<a href="' . $query_str . '" class="dashicons dashicons-dismiss close-promo"></a>';
+            echo '<a href="' . esc_url($query_str) . '" class="dashicons dashicons-dismiss close-promo"></a>';
             echo '</div>';
           }
           $this->notice_spam += 1;
@@ -208,9 +208,9 @@ class TenWebNewLibNotices {
       'title' => __('Leave A Review?', $wd_options->prefix),
       'msg' => sprintf(__('We hope you\'ve enjoyed using WordPress %s! Would you consider leaving us a review on WordPress.org?', $wd_options->prefix), $wd_options->plugin_title),
       'link' => '<li><span class="dashicons dashicons-external"></span><a href="https://wordpress.org/support/plugin/' . $wd_options->plugin_wordpress_slug . '/reviews?filter=5&rate=5#new-post" target="_blank">' . __('Sure! I\'d love to!', $wd_options->prefix) . '</a></li>
-                         <li><span class="dashicons dashicons-smiley"></span><a href="' . $two_week_review_ignore . '"> ' . __('I\'ve already left a review', $wd_options->prefix) . '</a></li>
-                         <li><span class="dashicons dashicons-calendar-alt"></span><a href="' . $two_week_review_temp . '">' . __('Maybe Later', $wd_options->prefix) . '</a></li>
-                         <li><span class="dashicons dashicons-dismiss"></span><a href="' . $two_week_review_ignore . '">' . __('Never show again', $wd_options->prefix) . '</a></li>',
+                         <li><span class="dashicons dashicons-smiley"></span><a href="' . esc_url($two_week_review_ignore) . '"> ' . __('I\'ve already left a review', $wd_options->prefix) . '</a></li>
+                         <li><span class="dashicons dashicons-calendar-alt"></span><a href="' . esc_url($two_week_review_temp) . '">' . __('Maybe Later', $wd_options->prefix) . '</a></li>
+                         <li><span class="dashicons dashicons-dismiss"></span><a href="' . esc_url($two_week_review_ignore) . '">' . __('Never show again', $wd_options->prefix) . '</a></li>',
       'later_link' => $two_week_review_temp,
       'int' => 14,
     );

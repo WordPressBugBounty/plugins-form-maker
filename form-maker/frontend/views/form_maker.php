@@ -192,7 +192,7 @@ class FMViewForm_maker {
             $form_maker_front_end .= '<div class="fm-header-bg"><div class="fm-header ' . $image_pos . '">';
             if ( !isset($form_theme['HIPAlign']) || $form_theme['HIPAlign'] == 'left' || $form_theme['HIPAlign'] == 'top' ) {
               if ( $row->header_image_url ) {
-                $form_maker_front_end .= '<div class="fm-header-img ' . $hide_header_image_class . ' fm-animated ' . $header_image_animation . '"><img src="' . $row->header_image_url . '" ' . $image_width . ' ' . $image_height . '/></div>';
+                $form_maker_front_end .= '<div class="fm-header-img ' . $hide_header_image_class . ' fm-animated ' . $header_image_animation . '"><img src="' . esc_url($row->header_image_url) . '" ' . $image_width . ' ' . $image_height . '/></div>';
               }
             }
             if ( $row->header_title || $row->header_description ) {
@@ -207,7 +207,7 @@ class FMViewForm_maker {
             }
             if ( isset($form_theme['HIPAlign']) && ($form_theme['HIPAlign'] == 'right' || $form_theme['HIPAlign'] == 'bottom') ) {
               if ( $row->header_image_url ) {
-                $form_maker_front_end .= '<div class="fm-header-img"><img src="' . $row->header_image_url . '" ' . $image_width . ' ' . $image_height . '/></div>';
+                $form_maker_front_end .= '<div class="fm-header-img"><img src="' . esc_url($row->header_image_url) . '" ' . $image_width . ' ' . $image_height . '/></div>';
               }
             }
             $form_maker_front_end .= '</div></div>';
@@ -1803,7 +1803,7 @@ class FMViewForm_maker {
           $form_maker_front_end .= '<div class="fm-header-bg"><div class="fm-header ' . $image_pos . '">';
           if ( $form_theme['HIPAlign'] == 'left' || $form_theme['HIPAlign'] == 'top' ) {
             if ( $row->header_image_url ) {
-              $form_maker_front_end .= '<div class="fm-header-img ' . $hide_header_image_class . ' fm-animated ' . $header_image_animation . '"><img src="' . $row->header_image_url . '" ' . $image_width . ' ' . $image_height . '/></div>';
+              $form_maker_front_end .= '<div class="fm-header-img ' . $hide_header_image_class . ' fm-animated ' . $header_image_animation . '"><img src="' . esc_url($row->header_image_url) . '" ' . $image_width . ' ' . $image_height . '/></div>';
             }
           }
           if ( $row->header_title || $row->header_description ) {
@@ -1818,7 +1818,7 @@ class FMViewForm_maker {
           }
           if ( $form_theme['HIPAlign'] == 'right' || $form_theme['HIPAlign'] == 'bottom' ) {
             if ( $row->header_image_url ) {
-              $form_maker_front_end .= '<div class="fm-header-img"><img src="' . $row->header_image_url . '" ' . $image_width . ' ' . $image_height . '/></div>';
+              $form_maker_front_end .= '<div class="fm-header-img"><img src="' . esc_url($row->header_image_url) . '" ' . $image_width . ' ' . $image_height . '/></div>';
             }
           }
           $form_maker_front_end .= '</div></div>';
