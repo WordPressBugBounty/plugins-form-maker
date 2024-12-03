@@ -555,6 +555,10 @@ class WDW_FM_Library {
         case 18:
           $message = 'MySQL is in Read only mode. Unable to change database table structure.';
           break;
+        case 19:
+          $message = 'You do not have permission to save forms.';
+	        $type = 'error';
+          break;
         default:
         {
           $message = '';
@@ -6592,6 +6596,18 @@ class WDW_FM_Library {
     }
 
     return $choices_values;
+  }
+
+  public static function check_permissions() {
+	  if (function_exists('current_user_can')) {
+		  if (!current_user_can('manage_options') || !current_user_can('unfiltered_html')) {
+			  return false;
+		  }
+	  }
+	  else {
+	    return false;
+	  }
+    return true;
   }
 
 }

@@ -90,6 +90,15 @@ class FMControllerManage_fm extends FMAdminController {
     $id = WDW_FM_Library(self::PLUGIN)->get('current_id', 0, 'intval');
     $task = WDW_FM_Library(self::PLUGIN)->get('task', '', 'sanitize_key');
     if ( method_exists($this, $task) ) {
+	  if ( in_array($task, array( 'apply', 'save' ) ) ) {
+	    if ( !WDW_FM_Library(self::PLUGIN)->check_permissions() ) {
+		    WDW_FM_Library(self::PLUGIN)->fm_redirect(add_query_arg(array(
+			    'page' => $this->page,
+			    'task' => 'display',
+			    'message' => 19,
+		    ), admin_url('admin.php')));
+	    }
+	  }
       if ( $task != 'add' && $task != 'edit' && $task != 'display' && $task != 'form_options' && $task != 'email_options' && $task != 'display_options' && $task != 'form_layout' && $task != 'fm_live_search' ) {
         check_admin_referer(WDFMInstance(self::PLUGIN)->nonce, WDFMInstance(self::PLUGIN)->nonce);
       }
