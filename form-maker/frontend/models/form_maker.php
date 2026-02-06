@@ -1852,10 +1852,11 @@ class FMModelForm_maker {
                         );
                       }
                       if ( $form->save_uploads == 1 ) {
-                        if ( !move_uploaded_file( $fileTemp, $upload_dir[ 'basedir' ] . '/' . $destination . '/' . $fileName ) ) {
-                          $this->run_stripe_cancel_hook( $form, $stripeToken, $id );
-                          return array( 'error' => true, 'group_id' => $group_id, 'message' => addslashes( __( 'Error, file cannot be moved.', WDFMInstance(self::PLUGIN)->prefix ) ) );
-                        }
+                        $file_mime = mime_content_type($fileTemp);
+					    if ( $file_mime === 'image/svg+xml' || !move_uploaded_file( $fileTemp, $upload_dir[ 'basedir' ] . '/' . $destination . '/' . $fileName ) ) {
+						  $this->run_stripe_cancel_hook( $form, $stripeToken, $id );
+						  return array( 'error' => true, 'group_id' => $group_id, 'message' => addslashes( __( 'Error, file cannot be moved.', WDFMInstance(self::PLUGIN)->prefix ) ) );
+					    }
                         $value .= $upload_dir[ 'baseurl' ] . '/' . $destination . '/' . $fileName . '*@@url@@*';
                         $files[ 'tmp_name' ][ $file_key ] = '/' . $destination . '/' . $fileName;
                         $temp_file = array(
@@ -2616,16 +2617,38 @@ class FMModelForm_maker {
         $password = $temp[0];
         $temp = explode('***wdfdatabasewdf***', $temp[1]);
         $database = $temp[0];
-        $query = str_replace(array_keys($fvals), $fvals, $query->query);
+        $query = $query->query;
+        foreach ( array_keys($fvals) as $fval_key ) {
+	      $query = str_replace('"' . $fval_key . '"', $fval_key, $query);
+	      $query = str_replace('\'' . $fval_key . '\'', $fval_key, $query);
+	      $query = str_replace('`' . $fval_key . '`', $fval_key, $query);
+        }
+        $query_values = array();
+        $query = preg_replace_callback('/\{([^}]+)\}/', function($match) use ($fvals, &$query_values) {
+	      $placeholder_key = $match[0];
+	      if ( isset($fvals[$placeholder_key]) ) {
+		      $query_values[] = $fvals[$placeholder_key];
+		      return '"%s"';
+	      }
+	      return '"' . $match[0] . '"';
+        }, $query);
         foreach ( $user_fields as $user_key => $user_field ) {
           $query = str_replace('{' . $user_key . '}', $user_field, $query);
         }
         if ( $con_type == 'remote' ) {
           $wpdb_temp = new wpdb($username, $password, $database, $host);
-          $wpdb_temp->query($query);
+          if ( !empty($query_values) ) {
+            $wpdb_temp->query($wpdb_temp->prepare($query, $query_values));
+          } else {
+            $wpdb_temp->query($query);
+          }
         }
         else {
-          $wpdb->query($query);
+          if ( !empty($query_values) ) {
+            $wpdb->query($wpdb->prepare($query, $query_values));
+          } else {
+            $wpdb->query($query);
+          }
         }
       }
     }

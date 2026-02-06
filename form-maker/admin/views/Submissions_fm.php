@@ -756,7 +756,7 @@ class  FMViewSubmissions_fm extends FMAdminView {
 												<?php
 												}
 												elseif ( $sorted_label_types[$h] == 'type_hidden' ) {
-												  echo html_entity_decode($element_value);
+												  echo esc_html(html_entity_decode($element_value));
 												}
 												else {
 												  /* Check for Stripe case */
@@ -765,7 +765,7 @@ class  FMViewSubmissions_fm extends FMAdminView {
                               <button class="wd-button button-primary" onclick="change_stripe_status(this); return false;"><?php _e('Capture', WDFMInstance(self::PLUGIN)->prefix); ?></button><img src="<?php echo WDFM()->plugin_url ?>/images/loading.gif" class="fm-capture-loading fm-hidden">
 													<?php
 													} else { ?>
-															<p><?php echo $textdata['text']; ?></p>
+															<p><?php echo esc_html($textdata['text']); ?></p>
 														<?php
 													}
 												}
