@@ -2589,11 +2589,11 @@ class FMModelForm_maker {
       $html_list .= '</table>';
     }
     $user_fields = array(
-      "ip" => $ip,
-      "subid" => $group_id,
-      "userid" => $wp_userid,
-      "username" => $wp_username,
-      "useremail" => $wp_useremail,
+      "{ip}" => $ip,
+      "{subid}" => $group_id,
+      "{userid}" => $wp_userid,
+      "{username}" => $wp_username,
+      "{useremail}" => $wp_useremail,
     );
     $queries = $wpdb->get_results($wpdb->prepare("SELECT * FROM " . $wpdb->prefix . "formmaker_query WHERE form_id=%d", (int) $id));
     if ( $queries ) {
@@ -2618,23 +2618,16 @@ class FMModelForm_maker {
         $temp = explode('***wdfdatabasewdf***', $temp[1]);
         $database = $temp[0];
         $query = $query->query;
-        foreach ( array_keys($fvals) as $fval_key ) {
-	      $query = str_replace('"' . $fval_key . '"', $fval_key, $query);
-	      $query = str_replace('\'' . $fval_key . '\'', $fval_key, $query);
-	      $query = str_replace('`' . $fval_key . '`', $fval_key, $query);
-        }
         $query_values = array();
-        $query = preg_replace_callback('/\{([^}]+)\}/', function($match) use ($fvals, &$query_values) {
+		$query_keys = array_merge($fvals, $user_fields);
+        $query = preg_replace_callback('/\{([^}]+)\}/', function($match) use ($query_keys, &$query_values) {
 	      $placeholder_key = $match[0];
-	      if ( isset($fvals[$placeholder_key]) ) {
-		      $query_values[] = $fvals[$placeholder_key];
+	      if ( isset($query_keys[$placeholder_key]) ) {
+		      $query_values[] = $query_keys[$placeholder_key];
 		      return '"%s"';
 	      }
 	      return '"' . $match[0] . '"';
         }, $query);
-        foreach ( $user_fields as $user_key => $user_field ) {
-          $query = str_replace('{' . $user_key . '}', $user_field, $query);
-        }
         if ( $con_type == 'remote' ) {
           $wpdb_temp = new wpdb($username, $password, $database, $host);
           if ( !empty($query_values) ) {
