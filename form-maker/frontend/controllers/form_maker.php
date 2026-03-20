@@ -316,7 +316,9 @@ class FMControllerForm_maker {
             list($input_id, $input_val) = explode('|', $val);
             $str_key = '{'. $input_id .'}';
             if ( strpos($params, $str_key) > -1 ) {
-              $params = str_replace( $str_key, $input_val, $params );
+              // Escape for safe use inside SQL WHERE (params can end up in DB-backed choice queries).
+              $safe_val = trim( $wpdb->prepare( '%s', $input_val ), "'" );
+              $params = str_replace( $str_key, $safe_val, $params );
             }
           }
           $html = $this->view->$type( $params, $row, $form_id, $row_id, $type, $param );
