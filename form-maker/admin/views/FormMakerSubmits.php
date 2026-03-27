@@ -166,7 +166,7 @@ class FMViewFormMakerSubmits extends FMAdminView {
                                 $checked = $mat_params[$mat_rows + $mat_columns + 2 + $var_checkbox];
                                 ?>
                                 <td style="text-align:center">
-                                  <input type="text" value="<?php echo $checked; ?>" disabled /></td>
+                                  <input type="text" value="<?php echo esc_attr($checked); ?>" disabled /></td>
                                 <?php
                                 $var_checkbox++;
                               }

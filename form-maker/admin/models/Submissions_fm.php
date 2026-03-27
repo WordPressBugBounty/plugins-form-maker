@@ -867,7 +867,7 @@ class FMModelSubmissions_fm extends FMAdminModel {
             for ( $l = 1; $l <= $mat_columns; $l++ ) {
               $text_value = $matrix_value[$mat_rows + $mat_columns + 2 + $var_checkbox];
               $index = "'" . $k . '_' . $l . "'";
-              $matrix .= '<td style="text-align:center;"><input name="' . $label_id . '_input_elementform_id_temp' . $k . '_' . $l . '"  id="' . $label_id . '_input_elementform_id_temp' . $k . '_' . $l . '" type="' . $matrix_value[$mat_rows + $mat_columns + 2] . '" value="' . $text_value . '" onKeyUp="change_text_values(' . $index . ',' . $label_id . ',' . $mat_rows . ',' . $mat_columns . ')"/></td>';
+              $matrix .= '<td style="text-align:center;"><input name="' . $label_id . '_input_elementform_id_temp' . $k . '_' . $l . '"  id="' . $label_id . '_input_elementform_id_temp' . $k . '_' . $l . '" type="' . $matrix_value[$mat_rows + $mat_columns + 2] . '" value="' . esc_attr($text_value) . '" onKeyUp="change_text_values(' . $index . ',' . $label_id . ',' . $mat_rows . ',' . $mat_columns . ')"/></td>';
               $var_checkbox++;
             }
           }
