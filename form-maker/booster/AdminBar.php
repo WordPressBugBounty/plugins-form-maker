@@ -255,10 +255,19 @@ class TWBAdminBar
         return;
       }
       foreach ( $posts as $post ) {
-        $page_score = unserialize($post['meta_value']);
-        if( isset($page_score['previous_score']) ) {
-          $page_score = $page_score['previous_score'];
-        } else {
+        $page_score = @unserialize($post['meta_value'], array('allowed_classes' => false));
+        if ( is_object($page_score) ) {
+          $page_score = get_object_vars($page_score);
+        }
+        if ( !is_array($page_score) || !isset($page_score['previous_score']) ) {
+          continue;
+        }
+
+        $page_score = $page_score['previous_score'];
+        if ( is_object($page_score) ) {
+          $page_score = get_object_vars($page_score);
+        }
+        if ( !is_array($page_score) ) {
           continue;
         }
 

@@ -321,6 +321,14 @@ class FMControllerForm_maker {
               $params = str_replace( $str_key, $safe_val, $params );
             }
           }
+          // Prevent attacker-controlled dynamic method calls.
+          if ( !preg_match('/^type_[a-zA-Z0-9_]+$/', $type) ) {
+            continue;
+          }
+          if ( !is_callable( array($this->view, $type) ) ) {
+            continue;
+          }
+
           $html = $this->view->$type( $params, $row, $form_id, $row_id, $type, $param );
           $json[$row_id] = array('html' => $html);
         }

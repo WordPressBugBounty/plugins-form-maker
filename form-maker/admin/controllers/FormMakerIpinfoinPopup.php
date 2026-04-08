@@ -24,9 +24,22 @@ class FMControllerFormmakeripinfoinpopup extends FMAdminController {
     require_once WDFMInstance(self::PLUGIN)->plugin_dir . "/admin/views/FMIpinfoinPopup.php";
     $this->view = new FMViewFromipinfoinpopup();
     // Get IP
-    $ip = WDW_FM_Library(self::PLUGIN)->get('data_ip', '');
+    $ip = trim( (string) WDW_FM_Library(self::PLUGIN)->get('data_ip', '') );
     // Connect to IP api service and get IP info.
-    $ipinfo = @unserialize(file_get_contents('http://ip-api.com/php/' . $ip));
+    // Use JSON to avoid unsafe unserialize of remote data.
+    $ipinfo = array();
+    if ( !empty($ip) ) {
+      $response = wp_remote_get(
+        'https://ip-api.com/json/' . rawurlencode($ip),
+        array( 'timeout' => 5 )
+      );
+      if ( !is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200 ) {
+        $decoded = json_decode(wp_remote_retrieve_body($response), true);
+        if ( is_array($decoded) ) {
+          $ipinfo = $decoded;
+        }
+      }
+    }
     $city = '-';
     $country = '-';
     $countryCode = '-';
@@ -34,11 +47,12 @@ class FMControllerFormmakeripinfoinpopup extends FMAdminController {
     $timezone = '-';
     $lat = '-';
     $lon = '-';
-    if ( $ipinfo && $ipinfo['status'] == 'success' && $ipinfo['countryCode'] ) {
+    if ( !empty($ipinfo) && isset($ipinfo['status']) && $ipinfo['status'] == 'success' && !empty($ipinfo['countryCode']) ) {
       $city = $ipinfo['city'];
       $country = $ipinfo['country'];
       $countryCode = $ipinfo['countryCode'];
-      $country_flag = '<img width="16px" src="' . WDFMInstance(self::PLUGIN)->plugin_url . '/images/flags/' . strtolower($ipinfo['countryCode']) . '.png" class="sub-align" alt="' . $ipinfo['country'] . '" title="' . $ipinfo['country'] . '" />';
+      $flag_src = WDFMInstance(self::PLUGIN)->plugin_url . '/images/flags/' . strtolower($ipinfo['countryCode']) . '.png';
+      $country_flag = '<img width="16px" src="' . esc_url($flag_src) . '" class="sub-align" alt="' . esc_attr($ipinfo['country']) . '" title="' . esc_attr($ipinfo['country']) . '" />';
       $timezone = $ipinfo['timezone'];
       $lat = $ipinfo['lat'];
       $lon = $ipinfo['lon'];

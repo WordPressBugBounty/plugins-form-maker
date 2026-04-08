@@ -42,7 +42,10 @@ class FMModelSubmissions_fm extends FMAdminModel {
 	*/
 	public function get_form( $id = 0 ) {
 		global $wpdb;
-		$query = 'SELECT `id`, `title` FROM ' . $wpdb->prefix .'formmaker WHERE id = ' . $id ;
+		$query = $wpdb->prepare(
+			'SELECT `id`, `title` FROM ' . $wpdb->prefix . 'formmaker WHERE id = %d',
+			(int) $id
+		);
 		$form = $wpdb->get_row( $query );
 		return $form;
 	}
@@ -150,25 +153,31 @@ class FMModelSubmissions_fm extends FMAdminModel {
     $lists['username_search'] = WDW_FM_Library(self::PLUGIN)->get('username_search');
     $lists['useremail_search'] = WDW_FM_Library(self::PLUGIN)->get('useremail_search');
     $lists['id_search'] = WDW_FM_Library(self::PLUGIN)->get('id_search');
-    if ( $lists['ip_search'] ) {
-      $where[] = 'ip LIKE "%' . $lists['ip_search'] . '%"';
+    if ( !empty($lists['ip_search']) ) {
+      $where[] = $wpdb->prepare( 'ip LIKE %s', '%' . $wpdb->esc_like( $lists['ip_search'] ) . '%' );
     }
-    if ( $lists['startdate'] != '' ) {
-      $where[] = " `date`>='" . $lists['startdate'] . " 00:00:00' ";
+    if ( !empty($lists['startdate']) ) {
+      $where[] = $wpdb->prepare( '`date`>=%s', $lists['startdate'] . ' 00:00:00' );
     }
-    if ( $lists['enddate'] != '' ) {
-      $where[] = " `date`<='" . $lists['enddate'] . " 23:59:59' ";
+    if ( !empty($lists['enddate']) ) {
+      $where[] = $wpdb->prepare( '`date`<=%s', $lists['enddate'] . ' 23:59:59' );
     }
-    if ( $lists['username_search'] ) {
-      $where[] = 'user_id_wd IN (SELECT ID FROM ' . $wpdb->prefix . 'users WHERE display_name LIKE "%' . $lists['username_search'] . '%")';
+    if ( !empty($lists['username_search']) ) {
+      $where[] = $wpdb->prepare(
+        'user_id_wd IN (SELECT ID FROM ' . $wpdb->prefix . 'users WHERE display_name LIKE %s)',
+        '%' . $wpdb->esc_like( $lists['username_search'] ) . '%'
+      );
     }
-    if ( $lists['useremail_search'] ) {
-      $where[] = 'user_id_wd IN (SELECT ID FROM ' . $wpdb->prefix . 'users WHERE user_email LIKE "%' . $lists['useremail_search'] . '%")';
+    if ( !empty($lists['useremail_search']) ) {
+      $where[] = $wpdb->prepare(
+        'user_id_wd IN (SELECT ID FROM ' . $wpdb->prefix . 'users WHERE user_email LIKE %s)',
+        '%' . $wpdb->esc_like( $lists['useremail_search'] ) . '%'
+      );
     }
-    if ( $lists['id_search'] ) {
-      $where[] = 'group_id =' . (int) $lists['id_search'];
+    if ( !empty($lists['id_search']) ) {
+      $where[] = $wpdb->prepare( 'group_id=%d', (int) $lists['id_search'] );
     }
-    $where[] = 'form_id=' . $form_id . '';
+    $where[] = $wpdb->prepare( 'form_id=%d', (int) $form_id );
     $where = (count($where) ? ' ' . implode(' AND ', $where) : '');
     if ( $order_by == 'group_id' or $order_by == 'date' or $order_by == 'ip' ) {
       $orderby = ' ORDER BY ' . $order_by . ' ' . $asc_or_desc . '';
@@ -226,6 +235,8 @@ class FMModelSubmissions_fm extends FMAdminModel {
             $search_temp = WDW_FM_Library(self::PLUGIN)->get($_search_key);
           }
           $search_temp = urldecode($search_temp);
+          // Prevent SQL injection when $search_temp is interpolated into dynamic SQL fragments later.
+          $search_temp = str_replace(array("'", '"', '\\'), '', $search_temp);
           /* TODO conflict other DB version
             $search_temp = html_entity_decode($search_temp, ENT_QUOTES);
           */
@@ -243,7 +254,7 @@ class FMModelSubmissions_fm extends FMAdminModel {
             $join_query[] = 'search';
             $join_where[] = NULL;
             foreach (array_keys($ver_emails_array) as $key => $value) {
-              $ver_email_keys_for_regex[$key] = '^' . $value . '$';
+              $ver_email_keys_for_regex[$key] = '^' . (int) $value . '$';
             }
             $join_verified[] = array(
               'label' => $label_id,
@@ -268,19 +279,42 @@ class FMModelSubmissions_fm extends FMAdminModel {
           $ver_where .= '(element_label ="' . $join_ver['label'] . '" AND group_id REGEXP "' . $join_ver['ver_search'] . '" ) AND';
         }
       }
+      // Sanitize dynamically interpolated label/search values used in SQL fragments below.
+      $join_where_safe = array();
+      foreach ( $join_where as $jw_key => $jw_val ) {
+        if ( !is_array($jw_val) ) {
+          $join_where_safe[$jw_key] = $jw_val;
+          continue;
+        }
+        $safe_label = '';
+        if ( isset($jw_val['label']) ) {
+          $safe_label = preg_replace('/[^a-zA-Z0-9_]/', '', (string) $jw_val['label']);
+        }
+        $safe_search = '';
+        $safe_search_alt = '';
+        if ( isset($jw_val['search']) ) {
+          $safe_search = esc_sql( $wpdb->esc_like( (string) $jw_val['search'] ) );
+          $safe_search_alt = esc_sql( $wpdb->esc_like( str_replace(' ', '@@@', (string) $jw_val['search']) ) );
+        }
+        $join_where_safe[$jw_key] = array(
+          'label' => $safe_label,
+          'search' => $safe_search,
+          'search_alt' => $safe_search_alt,
+        );
+      }
       switch ( count($join_query) ) {
         case 0:
           $join = 'SELECT distinct group_id FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where;
           break;
         case 1:
           if ( $join_query[0] == 'sort' ) {
-            $join = 'SELECT group_id FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where . ' AND element_label="' . $join_where[0]['label'] . '" ';
-            $join_count = 'SELECT count(group_id) FROM ' . $wpdb->prefix . 'formmaker_submits WHERE form_id="' . $form_id . '" AND element_label="' . $join_where[0]['label'] . '" ';
+            $join = 'SELECT group_id FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where . ' AND element_label="' . $join_where_safe[0]['label'] . '" ';
+            $join_count = 'SELECT count(group_id) FROM ' . $wpdb->prefix . 'formmaker_submits WHERE form_id="' . (int) $form_id . '" AND element_label="' . $join_where_safe[0]['label'] . '" ';
             $orderby = ' ORDER BY `element_value` ' . $asc_or_desc;
           }
           else {
-            if ( isset($join_where[0]['search']) ) {
-              $join = 'SELECT group_id FROM ' . $wpdb->prefix . 'formmaker_submits WHERE element_label="' . $join_where[0]['label'] . '" AND  (element_value LIKE "%' . $join_where[0]['search'] . '%" OR element_value LIKE "%' . str_replace(' ', '@@@', $join_where[0]['search']) . '%")  AND ' . $where;
+            if ( isset($join_where_safe[0]['search']) ) {
+              $join = 'SELECT group_id FROM ' . $wpdb->prefix . 'formmaker_submits WHERE element_label="' . $join_where_safe[0]['label'] . '" AND  (element_value LIKE "%' . $join_where_safe[0]['search'] . '%" OR element_value LIKE "%' . $join_where_safe[0]['search_alt'] . '%")  AND ' . $where;
             }
             else {
               $join = 'SELECT group_id FROM ' . $wpdb->prefix . 'formmaker_submits WHERE  ' . $ver_where . $where;
@@ -289,26 +323,26 @@ class FMModelSubmissions_fm extends FMAdminModel {
           break;
         default:
           if ( !empty($join_verified) ) {
-            if ( isset($join_where[0]['search']) ) {
-              $join = 'SELECT t.group_id from (SELECT t1.group_id from (SELECT ' . $cols . ' FROM ' . $wpdb->prefix . 'formmaker_submits WHERE (element_label="' . $join_where[0]['label'] . '" AND (element_value LIKE "%' . $join_where[0]['search'] . '%" OR element_value LIKE "%' . str_replace(' ', '@@@', $join_where[0]['search']) . '%")) AND ' . $where . ' ) as t1 JOIN (SELECT group_id FROM ' . $wpdb->prefix . 'formmaker_submits WHERE  ' . $ver_where . $where . ') as t2 ON t1.group_id = t2.group_id) as t ';
+            if ( isset($join_where_safe[0]['search']) ) {
+              $join = 'SELECT t.group_id from (SELECT t1.group_id from (SELECT ' . $cols . ' FROM ' . $wpdb->prefix . 'formmaker_submits WHERE (element_label="' . $join_where_safe[0]['label'] . '" AND (element_value LIKE "%' . $join_where_safe[0]['search'] . '%" OR element_value LIKE "%' . $join_where_safe[0]['search_alt'] . '%")) AND ' . $where . ' ) as t1 JOIN (SELECT group_id FROM ' . $wpdb->prefix . 'formmaker_submits WHERE  ' . $ver_where . $where . ') as t2 ON t1.group_id = t2.group_id) as t ';
             }
             else {
               $join = 'SELECT t.group_id FROM (SELECT ' . $cols . '  FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $ver_where . $where . ') as t ';
             }
           }
           else {
-            $join = 'SELECT t.group_id FROM (SELECT ' . $cols . '  FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where . ' AND element_label="' . $join_where[0]['label'] . '" AND  (element_value LIKE "%' . $join_where[0]['search'] . '%" OR element_value LIKE "%' . str_replace(' ', '@@@', $join_where[0]['search']) . '%" )) as t ';
+            $join = 'SELECT t.group_id FROM (SELECT ' . $cols . '  FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where . ' AND element_label="' . $join_where_safe[0]['label'] . '" AND  (element_value LIKE "%' . $join_where_safe[0]['search'] . '%" OR element_value LIKE "%' . $join_where_safe[0]['search_alt'] . '%" )) as t ';
           }
           for ( $key = 1; $key < count($join_query); $key++ ) {
             if ( $join_query[$key] == 'sort' ) {
-              if ( isset($join_where[$key]) ) {
-                $join .= 'LEFT JOIN (SELECT group_id as group_id' . $key . ', element_value   FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where . ' AND element_label="' . $join_where[$key]['label'] . '") as t' . $key . ' ON t' . $key . '.group_id' . $key . '=t.group_id ';
+              if ( isset($join_where_safe[$key]) ) {
+                $join .= 'LEFT JOIN (SELECT group_id as group_id' . $key . ', element_value   FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where . ' AND element_label="' . $join_where_safe[$key]['label'] . '") as t' . $key . ' ON t' . $key . '.group_id' . $key . '=t.group_id ';
                 $orderby = ' ORDER BY t' . $key . '.`element_value` ' . $asc_or_desc . '';
               }
             }
             else {
-              if ( isset($join_where[$key]) ) {
-                $join .= 'INNER JOIN (SELECT group_id as group_id' . $key . ' FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where . ' AND element_label="' . $join_where[$key]['label'] . '" AND  (element_value LIKE "%' . $join_where[$key]['search'] . '%" OR element_value LIKE "%' . str_replace(' ', '@@@', $join_where[$key]['search']) . '%")) as t' . $key . ' ON t' . $key . '.group_id' . $key . '=t.group_id ';
+              if ( isset($join_where_safe[$key]) ) {
+                $join .= 'INNER JOIN (SELECT group_id as group_id' . $key . ' FROM ' . $wpdb->prefix . 'formmaker_submits WHERE ' . $where . ' AND element_label="' . $join_where_safe[$key]['label'] . '" AND  (element_value LIKE "%' . $join_where_safe[$key]['search'] . '%" OR element_value LIKE "%' . $join_where_safe[$key]['search_alt'] . '%")) as t' . $key . ' ON t' . $key . '.group_id' . $key . '=t.group_id ';
               }
             }
           }
@@ -341,7 +375,7 @@ class FMModelSubmissions_fm extends FMAdminModel {
       $where2 = array();
       $where2[] = "group_id='0'";
       foreach ( $rows_ord as $rows_ordd ) {
-        $where2[] = "group_id='" . $rows_ordd . "'";
+        $where2[] = "group_id='" . (int) $rows_ordd . "'";
       }
       $where2 = (count($where2) ? ' WHERE ' . implode(' OR ', $where2) . '' : '');
       $query = 'SELECT * FROM ' . $wpdb->prefix . 'formmaker_submits ' . $where2;
