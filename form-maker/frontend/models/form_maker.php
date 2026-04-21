@@ -43,7 +43,7 @@ class FMModelForm_maker {
       }
       return FALSE;
     }
-    $theme_id = WDW_FM_Library(self::PLUGIN)->get( 'test_theme');
+    $theme_id = current_user_can('manage_options') ? WDW_FM_Library(self::PLUGIN)->get( 'test_theme') : '';
 
     if ( $theme_id == '' ) {
       $theme_id = $row->theme;
