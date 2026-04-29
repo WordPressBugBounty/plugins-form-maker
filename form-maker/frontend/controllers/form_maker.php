@@ -316,8 +316,8 @@ class FMControllerForm_maker {
             list($input_id, $input_val) = explode('|', $val);
             $str_key = '{'. $input_id .'}';
             if ( strpos($params, $str_key) > -1 ) {
-              // Escape for safe use inside SQL WHERE (params can end up in DB-backed choice queries).
-              $safe_val = trim( $wpdb->prepare( '%s', $input_val ), "'" );
+              // Keep placeholder values as quoted SQL literals; downstream query builder re-binds safely.
+              $safe_val = $wpdb->prepare( '%s', $input_val );
               $params = str_replace( $str_key, $safe_val, $params );
             }
           }

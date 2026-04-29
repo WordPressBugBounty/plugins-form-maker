@@ -6533,8 +6533,10 @@ class WDW_FM_Library {
    */
   public static function select_data_from_db_for_labels( $db_info = '', $label_column = '', $table = '', $where = '', $order_by = '' ) {
     global $wpdb;
-    $where = html_entity_decode($where, ENT_QUOTES);
-    $query = "SELECT `" . $label_column . "` FROM " . $table . $where . " ORDER BY " . $order_by;
+    $query_data = self::build_safe_dynamic_select_query( $label_column, $table, $where, $order_by );
+    if ( empty( $query_data['query'] ) ) {
+      return array();
+    }
     $db_info = trim($db_info, '[]');
     if ( $db_info ) {
       $temp = explode( '@@@wdfhostwdf@@@', $db_info );
@@ -6551,8 +6553,10 @@ class WDW_FM_Library {
       $temp = explode( '@@@wdfdatabasewdf@@@', $temp[ 1 ] );
       $database = $temp[ 0 ];
       $wpdb_temp = new wpdb( $username, $password, $database, $host );
+      $query = !empty( $query_data['binds'] ) ? $wpdb_temp->prepare( $query_data['query'], $query_data['binds'] ) : $query_data['query'];
       $choices_labels = $wpdb_temp->get_results( $query, ARRAY_N );
     } else {
+      $query = !empty( $query_data['binds'] ) ? $wpdb->prepare( $query_data['query'], $query_data['binds'] ) : $query_data['query'];
       $choices_labels = $wpdb->get_results( $query, ARRAY_N );
     }
 
@@ -6572,8 +6576,10 @@ class WDW_FM_Library {
    */
   public static function select_data_from_db_for_values( $db_info = '', $value_column = '', $table = '', $where = '', $order_by = '' ) {
     global $wpdb;
-    $where = html_entity_decode($where, ENT_QUOTES);
-    $query = "SELECT `" . $value_column . "` FROM " . $table . $where . " ORDER BY " . $order_by;
+    $query_data = self::build_safe_dynamic_select_query( $value_column, $table, $where, $order_by );
+    if ( empty( $query_data['query'] ) ) {
+      return array();
+    }
     $db_info = trim($db_info, '[]');
     if ( $db_info ) {
       $temp = explode( '@@@wdfhostwdf@@@', $db_info );
@@ -6590,12 +6596,81 @@ class WDW_FM_Library {
       $temp = explode( '@@@wdfdatabasewdf@@@', $temp[ 1 ] );
       $database = $temp[ 0 ];
       $wpdb_temp = new wpdb( $username, $password, $database, $host );
+      $query = !empty( $query_data['binds'] ) ? $wpdb_temp->prepare( $query_data['query'], $query_data['binds'] ) : $query_data['query'];
       $choices_values = $wpdb_temp->get_results( $query, ARRAY_N );
     } else {
+      $query = !empty( $query_data['binds'] ) ? $wpdb->prepare( $query_data['query'], $query_data['binds'] ) : $query_data['query'];
       $choices_values = $wpdb->get_results( $query, ARRAY_N );
     }
 
     return $choices_values;
+  }
+
+  /**
+   * Build prepared query for DB-backed dynamic choice fields.
+   *
+   * @param string $column
+   * @param string $table
+   * @param string $where
+   * @param string $order_by
+   *
+   * @return array
+   */
+  private static function build_safe_dynamic_select_query( $column = '', $table = '', $where = '', $order_by = '' ) {
+    $column = trim( (string) $column );
+    $table = trim( (string) $table );
+    $order_by = trim( html_entity_decode( (string) $order_by, ENT_QUOTES ) );
+
+    if ( !preg_match( '/^[A-Za-z0-9_]+$/', $column ) ) {
+      return array( 'query' => '', 'binds' => array() );
+    }
+    if ( !preg_match( '/^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)?$/', $table ) ) {
+      return array( 'query' => '', 'binds' => array() );
+    }
+
+    $order_parts = array_filter( array_map( 'trim', explode( ',', $order_by ) ) );
+    $safe_order_clause = '';
+    if ( !empty( $order_parts ) ) {
+      $safe_order_parts = array();
+      foreach ( $order_parts as $part ) {
+        if ( !preg_match( '/^([A-Za-z0-9_]+)(?:\s+(ASC|DESC))?$/i', $part, $matches ) ) {
+          return array( 'query' => '', 'binds' => array() );
+        }
+        $safe_order_parts[] = '`' . $matches[1] . '` ' . ( isset( $matches[2] ) ? strtoupper( $matches[2] ) : 'ASC' );
+      }
+      $safe_order_clause = ' ORDER BY ' . implode( ', ', $safe_order_parts );
+    }
+
+    $safe_table = ( strpos( $table, '.' ) === false ) ? '`' . $table . '`' : '`' . str_replace( '.', '`.`', $table ) . '`';
+    $decoded_where = trim( html_entity_decode( (string) $where, ENT_QUOTES ) );
+    if ( preg_match( '/^where\s+/i', $decoded_where ) ) {
+      $decoded_where = trim( preg_replace( '/^where\s+/i', '', $decoded_where ) );
+    }
+    if ( preg_match( '/(;|--|#|\/\*)/', $decoded_where ) ) {
+      return array( 'query' => '', 'binds' => array() );
+    }
+
+    $binds = array();
+    $where_prepared = '';
+    if ( $decoded_where !== '' ) {
+      $where_prepared = preg_replace_callback(
+        "/'((?:\\\\'|[^'])*)'/",
+        function ( $matches ) use ( &$binds ) {
+          $binds[] = str_replace( "\\'", "'", $matches[1] );
+          return '%s';
+        },
+        $decoded_where
+      );
+      if ( $where_prepared === null || !preg_match( '/^[A-Za-z0-9_`.\s%<>=!(),-]+$/', $where_prepared ) ) {
+        return array( 'query' => '', 'binds' => array() );
+      }
+      $where_prepared = ' WHERE ' . $where_prepared;
+    }
+
+    return array(
+      'query' => 'SELECT `' . $column . '` FROM ' . $safe_table . $where_prepared . $safe_order_clause,
+      'binds' => $binds,
+    );
   }
 
   public static function check_permissions() {
