@@ -4680,7 +4680,7 @@ class WDW_FM_Library {
     $page_num   = self::get( 'page_num', 0, 'intval' );
     $search_labels = self::get( 'search_labels' );
     $gr_ids = self::get('groupids');
-    $groupids = !empty($gr_ids) ? explode(',', $gr_ids) : array(); //TODO??//
+    $groupids = !empty($gr_ids) ? array_map('intval', explode(',', $gr_ids)) : array();
 
     $verified_emails = isset($_REQUEST['verified_emails']) ? self::sanitize_array(json_decode(stripslashes($_REQUEST['verified_emails']), TRUE)) : array();
 
@@ -4745,7 +4745,8 @@ class WDW_FM_Library {
     $data = array();
     $is_paypal_info = FALSE;
     if ( !empty($groupids) ) {
-      $query = $wpdb->prepare("SELECT `group_id`, `ip`, `date`, `user_id_wd`, GROUP_CONCAT( element_label SEPARATOR ',') AS `element_label`, GROUP_CONCAT( element_value SEPARATOR '*:*el_value*:*') AS `element_value` FROM " . $wpdb->prefix . "formmaker_submits WHERE `form_id` = %d and `group_id` IN(" . implode(',', $groupids) . ") GROUP BY `group_id` ORDER BY `date` ASC", $form_id);
+      $placeholders = implode(', ', array_fill(0, count($groupids), '%d'));
+      $query = $wpdb->prepare("SELECT `group_id`, `ip`, `date`, `user_id_wd`, GROUP_CONCAT( element_label SEPARATOR ',') AS `element_label`, GROUP_CONCAT( element_value SEPARATOR '*:*el_value*:*') AS `element_value` FROM " . $wpdb->prefix . "formmaker_submits WHERE `form_id` = %d and `group_id` IN(" . $placeholders . ") GROUP BY `group_id` ORDER BY `date` ASC", array_merge(array($form_id), $groupids));
       $rows = $wpdb->get_results($query, OBJECT_K);
       for ( $www = 0; $www < count($groupids); $www++ ) {
         $i = $groupids[$www];

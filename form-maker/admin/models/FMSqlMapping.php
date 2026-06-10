@@ -79,6 +79,22 @@ class FMModelFormMakerSQLMapping extends FMAdminModel {
     return $tables;
   }
 
+  /**
+   * Validate a table name against allowed identifier characters and a table list.
+   *
+   * @param string $name
+   * @param array  $tables
+   *
+   * @return bool
+   */
+  private function is_valid_table_name( $name, $tables ) {
+    if ( ! is_string( $name ) || ! preg_match( '/^[A-Za-z0-9_]+$/', $name ) ) {
+      return false;
+    }
+
+    return in_array( $name, (array) $tables, true );
+  }
+
   function get_table_struct() {
     global $wpdb;
     $name = WDW_FM_Library(self::PLUGIN)->get('name', NULL);
@@ -87,6 +103,10 @@ class FMModelFormMakerSQLMapping extends FMAdminModel {
     }
     $con_method = WDW_FM_Library(self::PLUGIN)->get('con_method', NULL);
     $con_type = WDW_FM_Library(self::PLUGIN)->get('con_type', NULL);
+    $tables = $this->get_tables();
+    if ( ! $this->is_valid_table_name( $name, $tables ) ) {
+      return array();
+    }
     $query = 'SHOW COLUMNS FROM `' . $name . '`';
     if ( $con_type == 'remote' ) {
       $username = WDW_FM_Library(self::PLUGIN)->get('username', '');
@@ -110,6 +130,10 @@ class FMModelFormMakerSQLMapping extends FMAdminModel {
   function get_table_struct_saved( $con_type, $username, $password, $database, $host, $name, $con_method ) {
     global $wpdb;
     if ( !$name ) {
+      return array();
+    }
+    $tables = $this->get_tables_saved( $con_type, $username, $password, $database, $host );
+    if ( ! $this->is_valid_table_name( $name, $tables ) ) {
       return array();
     }
     $query = 'SHOW COLUMNS FROM `' . $name . '`';
