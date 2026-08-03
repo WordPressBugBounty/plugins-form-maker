@@ -6158,6 +6158,131 @@ class WDW_FM_Library {
   }
 
   /**
+   * Prepare a Dynamic Choices WHERE template by binding custom field placeholders.
+   *
+   * @param string     $where_template Raw template (may include [ ], WHERE, {username}, %username%).
+   * @param array|null $custom_fields  Optional map; defaults to get_custom_fields().
+   * @return array{ where: string, binds: array<int, string>, valid: bool }
+   */
+  public static function prepare_dynamic_where_with_custom_fields( $where_template, $custom_fields = null ) {
+    if ( $custom_fields === null ) {
+      $custom_fields = self::get_custom_fields();
+    }
+    if ( ! is_array( $custom_fields ) ) {
+      $custom_fields = array();
+    }
+    $decoded = trim( html_entity_decode( (string) $where_template, ENT_QUOTES ) );
+    $decoded = str_replace( array( '[', ']' ), '', $decoded );
+    $decoded = trim( $decoded );
+    if ( preg_match( '/^where\s+/i', $decoded ) ) {
+      $decoded = trim( preg_replace( '/^where\s+/i', '', $decoded ) );
+    }
+    if ( $decoded === '' ) {
+      return array( 'where' => '', 'binds' => array(), 'valid' => true );
+    }
+    if ( preg_match( '/(;|--|#|\/\*)/', $decoded ) ) {
+      return array( 'where' => '', 'binds' => array(), 'valid' => false );
+    }
+    return self::bind_dynamic_where_clause( $decoded, $custom_fields );
+  }
+
+  /**
+   * Single left-to-right pass: placeholders + quoted literals -> %s binds, then grammar check.
+   *
+   * @param string $where
+   * @param array  $custom_fields
+   * @return array{ where: string, binds: array<int, string>, valid: bool }
+   */
+  private static function bind_dynamic_where_clause( $where, $custom_fields ) {
+    $keys = array_keys( $custom_fields );
+    usort( $keys, function ( $a, $b ) {
+      return strlen( $b ) - strlen( $a );
+    } );
+    $key_alt = array();
+    foreach ( $keys as $k ) {
+      $key_alt[] = preg_quote( $k, '/' );
+    }
+    $keys_re = $key_alt ? implode( '|', $key_alt ) : '(?!)';
+
+    $binds = array();
+    $out = '';
+    $i = 0;
+    $len = strlen( $where );
+    while ( $i < $len ) {
+      $rest = substr( $where, $i );
+
+      // Quoted wildcard placeholder: '%{key}%' or "%{key}%"
+      if ( preg_match( '/^([\'"])%\{(' . $keys_re . ')\}%\1/', $rest, $m ) ) {
+        $binds[] = '%' . (string) $custom_fields[ $m[2] ] . '%';
+        $out .= '%s';
+        $i += strlen( $m[0] );
+        continue;
+      }
+
+      // Quoted placeholder: '{key}' or "{key}" or '%key%' or "%key%"
+      if ( preg_match( '/^([\'"])\{(' . $keys_re . ')\}\1/', $rest, $m )
+        || preg_match( '/^([\'"])%(' . $keys_re . ')%\1/', $rest, $m ) ) {
+        $binds[] = (string) $custom_fields[ $m[2] ];
+        $out .= '%s';
+        $i += strlen( $m[0] );
+        continue;
+      }
+
+      // Bare placeholder: {key} or %key%
+      if ( preg_match( '/^\{(' . $keys_re . ')\}/', $rest, $m )
+        || preg_match( '/^%(' . $keys_re . ')%/', $rest, $m ) ) {
+        $binds[] = (string) $custom_fields[ $m[1] ];
+        $out .= '%s';
+        $i += strlen( $m[0] );
+        continue;
+      }
+
+      // Quoted literal '...'
+      if ( $rest[0] === "'" ) {
+        if ( ! preg_match( "/^'((?:\\\\'|[^'])*)'/", $rest, $m ) ) {
+          return array( 'where' => '', 'binds' => array(), 'valid' => false );
+        }
+        $literal = str_replace( "\\'", "'", $m[1] );
+        if ( $literal === '' ) {
+          return array( 'where' => '', 'binds' => array(), 'valid' => false );
+        }
+        $binds[] = $literal;
+        $out .= '%s';
+        $i += strlen( $m[0] );
+        continue;
+      }
+
+      $out .= $rest[0];
+      $i++;
+    }
+
+    if ( strpos( $out, "'" ) !== false ) {
+      return array( 'where' => '', 'binds' => array(), 'valid' => false );
+    }
+
+    $out_trim = trim( $out );
+    if ( $out_trim === '' ) {
+      return array( 'where' => '', 'binds' => $binds, 'valid' => true );
+    }
+
+    // Grammar: ident op %s ( (AND|OR) ident op %s )*
+    $ident = '`?[A-Za-z_][A-Za-z0-9_]*`?';
+    $op = '(?:=|<>|!=|<=|>=|<|>|LIKE)';
+    $cond = $ident . '\s*' . $op . '\s*%s';
+    $grammar = '/^' . $cond . '(?:\s+(?:AND|OR)\s+' . $cond . ')*$/i';
+    if ( ! preg_match( $grammar, $out_trim ) ) {
+      return array( 'where' => '', 'binds' => array(), 'valid' => false );
+    }
+
+    $placeholder_count = substr_count( $out_trim, '%s' );
+    if ( $placeholder_count !== count( $binds ) ) {
+      return array( 'where' => '', 'binds' => array(), 'valid' => false );
+    }
+
+    return array( 'where' => $out_trim, 'binds' => $binds, 'valid' => true );
+  }
+
+  /**
    * Update file read option.
    * @param int $val
    */
@@ -6532,9 +6657,9 @@ class WDW_FM_Library {
    * @param string $order_by
    * @return mixed
    */
-  public static function select_data_from_db_for_labels( $db_info = '', $label_column = '', $table = '', $where = '', $order_by = '' ) {
+  public static function select_data_from_db_for_labels( $db_info = '', $label_column = '', $table = '', $where = '', $order_by = '', $extra_binds = array() ) {
     global $wpdb;
-    $query_data = self::build_safe_dynamic_select_query( $label_column, $table, $where, $order_by );
+    $query_data = self::build_safe_dynamic_select_query( $label_column, $table, $where, $order_by, $extra_binds );
     if ( empty( $query_data['query'] ) ) {
       return array();
     }
@@ -6575,9 +6700,9 @@ class WDW_FM_Library {
    *
    * @return array|null|object
    */
-  public static function select_data_from_db_for_values( $db_info = '', $value_column = '', $table = '', $where = '', $order_by = '' ) {
+  public static function select_data_from_db_for_values( $db_info = '', $value_column = '', $table = '', $where = '', $order_by = '', $extra_binds = array() ) {
     global $wpdb;
-    $query_data = self::build_safe_dynamic_select_query( $value_column, $table, $where, $order_by );
+    $query_data = self::build_safe_dynamic_select_query( $value_column, $table, $where, $order_by, $extra_binds );
     if ( empty( $query_data['query'] ) ) {
       return array();
     }
@@ -6617,24 +6742,25 @@ class WDW_FM_Library {
    *
    * @return array
    */
-  private static function build_safe_dynamic_select_query( $column = '', $table = '', $where = '', $order_by = '' ) {
+  private static function build_safe_dynamic_select_query( $column = '', $table = '', $where = '', $order_by = '', $extra_binds = array() ) {
     $column = trim( (string) $column );
     $table = trim( (string) $table );
     $order_by = trim( html_entity_decode( (string) $order_by, ENT_QUOTES ) );
+    $extra_binds = is_array( $extra_binds ) ? array_values( $extra_binds ) : array();
 
-    if ( !preg_match( '/^[A-Za-z0-9_]+$/', $column ) ) {
+    if ( ! preg_match( '/^[A-Za-z0-9_]+$/', $column ) ) {
       return array( 'query' => '', 'binds' => array() );
     }
-    if ( !preg_match( '/^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)?$/', $table ) ) {
+    if ( ! preg_match( '/^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)?$/', $table ) ) {
       return array( 'query' => '', 'binds' => array() );
     }
 
     $order_parts = array_filter( array_map( 'trim', explode( ',', $order_by ) ) );
     $safe_order_clause = '';
-    if ( !empty( $order_parts ) ) {
+    if ( ! empty( $order_parts ) ) {
       $safe_order_parts = array();
       foreach ( $order_parts as $part ) {
-        if ( !preg_match( '/^([A-Za-z0-9_]+)(?:\s+(ASC|DESC))?$/i', $part, $matches ) ) {
+        if ( ! preg_match( '/^([A-Za-z0-9_]+)(?:\s+(ASC|DESC))?$/i', $part, $matches ) ) {
           return array( 'query' => '', 'binds' => array() );
         }
         $safe_order_parts[] = '`' . $matches[1] . '` ' . ( isset( $matches[2] ) ? strtoupper( $matches[2] ) : 'ASC' );
@@ -6643,29 +6769,38 @@ class WDW_FM_Library {
     }
 
     $safe_table = ( strpos( $table, '.' ) === false ) ? '`' . $table . '`' : '`' . str_replace( '.', '`.`', $table ) . '`';
+
     $decoded_where = trim( html_entity_decode( (string) $where, ENT_QUOTES ) );
     if ( preg_match( '/^where\s+/i', $decoded_where ) ) {
       $decoded_where = trim( preg_replace( '/^where\s+/i', '', $decoded_where ) );
-    }
-    if ( preg_match( '/(;|--|#|\/\*)/', $decoded_where ) ) {
-      return array( 'query' => '', 'binds' => array() );
     }
 
     $binds = array();
     $where_prepared = '';
     if ( $decoded_where !== '' ) {
-      $where_prepared = preg_replace_callback(
-        "/'((?:\\\\'|[^'])*)'/",
-        function ( $matches ) use ( &$binds ) {
-          $binds[] = str_replace( "\\'", "'", $matches[1] );
-          return '%s';
-        },
-        $decoded_where
-      );
-      if ( $where_prepared === null || !preg_match( '/^[A-Za-z0-9_`.\s%<>=!(),-]+$/', $where_prepared ) ) {
-        return array( 'query' => '', 'binds' => array() );
+      if ( ! empty( $extra_binds ) ) {
+        // Caller already bound placeholders; re-validate grammar only (no quote re-extraction).
+        $ident = '`?[A-Za-z_][A-Za-z0-9_]*`?';
+        $op = '(?:=|<>|!=|<=|>=|<|>|LIKE)';
+        $cond = $ident . '\s*' . $op . '\s*%s';
+        $grammar = '/^' . $cond . '(?:\s+(?:AND|OR)\s+' . $cond . ')*$/i';
+        if ( preg_match( '/(;|--|#|\/\*|\')/', $decoded_where )
+          || ! preg_match( $grammar, $decoded_where )
+          || substr_count( $decoded_where, '%s' ) !== count( $extra_binds ) ) {
+          return array( 'query' => '', 'binds' => array() );
+        }
+        $binds = $extra_binds;
+        $where_prepared = ' WHERE ' . $decoded_where;
+      } else {
+        $bound = self::bind_dynamic_where_clause( $decoded_where, array() );
+        if ( empty( $bound['valid'] ) ) {
+          return array( 'query' => '', 'binds' => array() );
+        }
+        if ( $bound['where'] !== '' ) {
+          $binds = $bound['binds'];
+          $where_prepared = ' WHERE ' . $bound['where'];
+        }
       }
-      $where_prepared = ' WHERE ' . $where_prepared;
     }
 
     return array(

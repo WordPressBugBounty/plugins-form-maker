@@ -52,6 +52,9 @@ class FMControllerCheckpaypal extends FMAdminController {
     $post_fields .= 'cmd=_notify-validate';
     $paypal_params = array( 'checkout_mode' => $form->checkout_mode, 'post_fields' => $post_fields );
     $response = $this->model->connect_to_paypal($paypal_params);
+    if ( strcmp( trim( (string) $response ), 'VERIFIED' ) !== 0 ) {
+      return 0;
+    }
     $tax = WDW_FM_Library(self::PLUGIN)->get('tax', 0);
     $total = WDW_FM_Library(self::PLUGIN)->get('mc_gross', 0);
     $shipping = WDW_FM_Library(self::PLUGIN)->get('mc_shipping', 0);

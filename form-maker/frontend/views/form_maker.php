@@ -2448,15 +2448,11 @@ class FMViewForm_maker {
       $key1 = $key + $total_queries;
       if ( isset($param['w_choices_params']) && $param['w_choices_params'][$key] ) {
         $w_choices_params = explode('[where_order_by]', $param['w_choices_params'][$key]);
-        $where_str = $w_choices_params[0];
-        foreach ( $custom_fields as $custom_key => $custom_val ) {
-          $key_replace = array( '%' . $custom_key . '%', '{' . $custom_key . '}' );
-          $where_str = str_replace($key_replace, $custom_val, $where_str);
-        }
-        $where = (str_replace(array( '[', ']' ), '', $w_choices_params[0]) ? ' WHERE ' . str_replace(array(
-                                                                                                       '[',
-                                                                                                       ']',
-                                                                                                     ), '', $where_str) : '');
+        $where_prepared = WDW_FM_Library::prepare_dynamic_where_with_custom_fields( $w_choices_params[0], $custom_fields );
+        $where_binds = ! empty( $where_prepared['valid'] ) ? $where_prepared['binds'] : array();
+        $where = ( ! empty( $where_prepared['valid'] ) && $where_prepared['where'] !== '' )
+          ? ' WHERE ' . $where_prepared['where']
+          : '';
         $w_choices_params = explode('[db_info]', $w_choices_params[1]);
         $order_by = str_replace(array( '[', ']' ), '', $w_choices_params[0]);
         $db_info = $w_choices_params[1];
@@ -2464,12 +2460,20 @@ class FMViewForm_maker {
         $table = $label_table_and_column[0];
         $label_column = $label_table_and_column[1];
         if ( $select_data_from_db && $label_column ) {
-          $choices_labels = WDW_FM_Library::select_data_from_db_for_labels($db_info, $label_column, $table, $where, $order_by);
+          if ( ! empty( $where_prepared['valid'] ) ) {
+            $choices_labels = WDW_FM_Library::select_data_from_db_for_labels($db_info, $label_column, $table, $where, $order_by, $where_binds);
+          } else {
+            $choices_labels = array();
+          }
         }
         $value_table_and_column = explode(':', str_replace(array( '[', ']' ), '', $param['w_choices_value'][$key]));
         $value_column = $value_table_and_column[1];
         if ( $select_data_from_db && $value_column ) {
-          $choices_values = WDW_FM_Library::select_data_from_db_for_values($db_info, $value_column, $table, $where, $order_by);
+          if ( ! empty( $where_prepared['valid'] ) ) {
+            $choices_values = WDW_FM_Library::select_data_from_db_for_values($db_info, $value_column, $table, $where, $order_by, $where_binds);
+          } else {
+            $choices_values = array();
+          }
         }
         $columns_count_checkbox = count($choices_labels) > 0 ? count($choices_labels) : count($choices_values);
         if ( array_filter($choices_labels) || array_filter($choices_values) ) {
@@ -2655,15 +2659,11 @@ class FMViewForm_maker {
       $key1 = $key + $total_queries;
       if ( isset($param['w_choices_params']) && $param['w_choices_params'][$key] ) {
         $w_choices_params = explode('[where_order_by]', $param['w_choices_params'][$key]);
-        $where_str = $w_choices_params[0];
-        foreach ( $custom_fields as $custom_key => $custom_val ) {
-          $key_replace = array( '%' . $custom_key . '%', '{' . $custom_key . '}' );
-          $where_str = str_replace($key_replace, $custom_val, $where_str);
-        }
-        $where = (str_replace(array( '[', ']' ), '', $w_choices_params[0]) ? ' WHERE ' . str_replace(array(
-                                                                                                       '[',
-                                                                                                       ']',
-                                                                                                     ), '', $where_str) : '');
+        $where_prepared = WDW_FM_Library::prepare_dynamic_where_with_custom_fields( $w_choices_params[0], $custom_fields );
+        $where_binds = ! empty( $where_prepared['valid'] ) ? $where_prepared['binds'] : array();
+        $where = ( ! empty( $where_prepared['valid'] ) && $where_prepared['where'] !== '' )
+          ? ' WHERE ' . $where_prepared['where']
+          : '';
         $w_choices_params = explode('[db_info]', $w_choices_params[1]);
         $order_by = str_replace(array( '[', ']' ), '', $w_choices_params[0]);
         $db_info = $w_choices_params[1];
@@ -2671,12 +2671,20 @@ class FMViewForm_maker {
         $table = $label_table_and_column[0];
         $label_column = $label_table_and_column[1];
         if ( $select_data_from_db && $label_column ) {
-          $choices_labels = WDW_FM_Library::select_data_from_db_for_labels($db_info, $label_column, $table, $where, $order_by);
+          if ( ! empty( $where_prepared['valid'] ) ) {
+            $choices_labels = WDW_FM_Library::select_data_from_db_for_labels($db_info, $label_column, $table, $where, $order_by, $where_binds);
+          } else {
+            $choices_labels = array();
+          }
         }
         $value_table_and_column = explode(':', str_replace(array( '[', ']' ), '', $param['w_choices_value'][$key]));
         $value_column = $value_table_and_column[1];
         if ( $select_data_from_db && $value_column ) {
-          $choices_values = WDW_FM_Library::select_data_from_db_for_values($db_info, $value_column, $table, $where, $order_by);
+          if ( ! empty( $where_prepared['valid'] ) ) {
+            $choices_values = WDW_FM_Library::select_data_from_db_for_values($db_info, $value_column, $table, $where, $order_by, $where_binds);
+          } else {
+            $choices_values = array();
+          }
         }
         $columns_count_radio = count($choices_labels) > 0 ? count($choices_labels) : count($choices_values);
         if ( array_filter($choices_labels) || array_filter($choices_values) ) {
@@ -2843,12 +2851,11 @@ class FMViewForm_maker {
     foreach ( $param['w_choices'] as $key => $choice ) {
       if ( isset($param['w_choices_params']) && $param['w_choices_params'][$key] ) {
         $w_choices_params = explode('[where_order_by]', $param['w_choices_params'][$key]);
-        $where_str = $w_choices_params[0];
-        foreach ( $custom_fields as $custom_key => $custom_val ) {
-          $key_replace = array( '%' . $custom_key . '%', '{' . $custom_key . '}' );
-          $where_str = str_replace( $key_replace, $custom_val, $where_str );
-        }
-        $where = (str_replace(array( '[', ']' ), '', $w_choices_params[0]) ? ' WHERE ' . str_replace(array('[', ']'), '', $where_str) : '');
+        $where_prepared = WDW_FM_Library::prepare_dynamic_where_with_custom_fields( $w_choices_params[0], $custom_fields );
+        $where_binds = ! empty( $where_prepared['valid'] ) ? $where_prepared['binds'] : array();
+        $where = ( ! empty( $where_prepared['valid'] ) && $where_prepared['where'] !== '' )
+          ? ' WHERE ' . $where_prepared['where']
+          : '';
         $w_choices_params = explode('[db_info]', $w_choices_params[1]);
         $order_by = str_replace(array( '[', ']' ), '', $w_choices_params[0]);
         $db_info = $w_choices_params[1];
@@ -2856,12 +2863,20 @@ class FMViewForm_maker {
         $table = $label_table_and_column[0];
         $label_column = $label_table_and_column[1];
         if ( $select_data_from_db && $label_column ) {
-          $choices_labels = WDW_FM_Library::select_data_from_db_for_labels($db_info, $label_column, $table, $where, $order_by);
+          if ( ! empty( $where_prepared['valid'] ) ) {
+            $choices_labels = WDW_FM_Library::select_data_from_db_for_labels($db_info, $label_column, $table, $where, $order_by, $where_binds);
+          } else {
+            $choices_labels = array();
+          }
         }
         $value_table_and_column = explode(':', str_replace(array('[', ']'), '', $param['w_choices_value'][$key]));
         $value_column = $param['w_choices_disabled'][$key] == "true" ? '' : $value_table_and_column[1];
         if ( $select_data_from_db && $value_column ) {
-          $choices_values = WDW_FM_Library::select_data_from_db_for_values($db_info, $value_column, $table, $where, $order_by);
+          if ( ! empty( $where_prepared['valid'] ) ) {
+            $choices_values = WDW_FM_Library::select_data_from_db_for_values($db_info, $value_column, $table, $where, $order_by, $where_binds);
+          } else {
+            $choices_values = array();
+          }
         }
         $columns_count = count($choices_labels) > 0 ? count($choices_labels) : count($choices_values);
         if ( array_filter($choices_labels) || array_filter($choices_values) ) {
