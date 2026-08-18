@@ -14,6 +14,29 @@ class FMModelForm_maker {
   public $fm_ajax_submit;
 
   /**
+   * Detects whether an uploaded file is (or contains) SVG/XML markup, regardless of
+   * what mime_content_type() reports for it, since that check can be bypassed by SVGs
+   * lacking a recognizable XML prolog.
+   *
+   * @param string $file_path
+   *
+   * @return bool
+   */
+  private function is_uploaded_file_svg( $file_path ) {
+    if ( function_exists( 'mime_content_type' ) ) {
+      $mime_type = @mime_content_type( $file_path );
+      if ( $mime_type && stripos( $mime_type, 'svg' ) !== FALSE ) {
+        return TRUE;
+      }
+    }
+    $contents = @file_get_contents( $file_path, FALSE, NULL, 0, 8192 );
+    if ( $contents === FALSE ) {
+      return TRUE;
+    }
+    return (bool) preg_match( '/<\s*svg[\s>]/i', $contents );
+  }
+
+  /**
    * @param int $id
    * @param string $type
    *
@@ -1852,8 +1875,7 @@ class FMModelForm_maker {
                         );
                       }
                       if ( $form->save_uploads == 1 ) {
-                        $file_mime = mime_content_type($fileTemp);
-					    if ( $file_mime === 'image/svg+xml' || !move_uploaded_file( $fileTemp, $upload_dir[ 'basedir' ] . '/' . $destination . '/' . $fileName ) ) {
+                        if ( $this->is_uploaded_file_svg( $fileTemp ) || !move_uploaded_file( $fileTemp, $upload_dir[ 'basedir' ] . '/' . $destination . '/' . $fileName ) ) {
 						  $this->run_stripe_cancel_hook( $form, $stripeToken, $id );
 						  return array( 'error' => true, 'group_id' => $group_id, 'message' => addslashes( __( 'Error, file cannot be moved.', WDFMInstance(self::PLUGIN)->prefix ) ) );
 					    }
@@ -3534,7 +3556,7 @@ class FMModelForm_maker {
       foreach ( $all_files as &$all_file ) {
         $fileTemp = $all_file[ 'tmp_name' ];
         $fileName = $all_file[ 'name' ];
-        if ( !move_uploaded_file( $fileTemp, $destination . '/' . $fileName ) ) {
+        if ( $this->is_uploaded_file_svg( $fileTemp ) || !move_uploaded_file( $fileTemp, $destination . '/' . $fileName ) ) {
           return array( 1, addslashes( __( 'Error, file cannot be moved.', WDFMInstance(self::PLUGIN)->prefix ) ) );
         }
         $all_file[ 'tmp_name' ] = $destination . "/" . $fileName;

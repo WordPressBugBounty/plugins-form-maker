@@ -646,7 +646,7 @@ class  FMViewSubmissions_fm extends FMAdminView {
 													$new_filename = $new_filename[count($new_filename) - 1];
 													$get_file_type = strstr($new_filename,  ".");
 													?>
-													<a target="_blank" rel="group_<?php echo $www; ?>" href="<?php echo $new_file; ?>"><?php echo $new_filename; ?></a>
+													<a target="_blank" rel="group_<?php echo $www; ?>" href="<?php echo esc_url($new_file); ?>"><?php echo esc_html($new_filename); ?></a>
 													<br />
 													<?php
 												}
