@@ -36,7 +36,7 @@ class FMAdminView {
     <?php
     // Generate message container by message id or directly by message.
     $message_id = WDW_FM_Library(self::PLUGIN)->get('message', 0, 'intval');
-    $message = WDW_FM_Library(self::PLUGIN)->get('msg', '');
+    $message = WDW_FM_Library(self::PLUGIN)->get('msg', '', 'sanitize_text_field');
     echo WDW_FM_Library(self::PLUGIN)->message_id($message_id, $message);
     ?>
       <form
@@ -281,7 +281,7 @@ class FMAdminView {
         <?php
         foreach ( $actions as $key => $action ) {
           ?>
-          <option value="<?php echo $key; ?>"><?php echo $action['title']; ?></option>
+          <option value="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $action['title'] ); ?></option>
           <?php
         }
         ?>

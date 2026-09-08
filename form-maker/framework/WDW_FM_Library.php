@@ -936,16 +936,18 @@ class WDW_FM_Library {
    * @param bool $nonce
    */
   public static function fm_redirect( $url, $nonce = true ) {
-    $url = html_entity_decode($url);
+    $url = html_entity_decode( $url, ENT_QUOTES, 'UTF-8' );
     if ( $nonce ) {
-      $url = html_entity_decode(wp_nonce_url($url, WDFMInstance(self::PLUGIN)->nonce, WDFMInstance(self::PLUGIN)->nonce));
+      $url = html_entity_decode( wp_nonce_url( $url, WDFMInstance(self::PLUGIN)->nonce, WDFMInstance(self::PLUGIN)->nonce ), ENT_QUOTES, 'UTF-8' );
     }
-    ?>
-    <script>
-      window.location = "<?php echo $url; ?>";
-    </script>
-    <?php
-    exit();
+    // Prefer a server-side redirect so query args cannot break out of a JS string.
+    if ( ! headers_sent() ) {
+      wp_safe_redirect( $url );
+      exit;
+    }
+    // Fallback only when headers are already sent: encode safely for a JS context.
+    echo '<script>window.location=' . wp_json_encode( esc_url_raw( $url ) ) . ';</script>';
+    exit;
   }
 
   public static function get_google_fonts() {

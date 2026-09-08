@@ -99,11 +99,11 @@ class FMControllerManage_fm extends FMAdminController {
 		    ), admin_url('admin.php')));
 	    }
 	  }
-      if ( $task != 'add' && $task != 'edit' && $task != 'display' && $task != 'form_options' && $task != 'email_options' && $task != 'display_options' && $task != 'form_layout' && $task != 'fm_live_search' ) {
-        check_admin_referer(WDFMInstance(self::PLUGIN)->nonce, WDFMInstance(self::PLUGIN)->nonce);
-      }
       $block_action = $this->bulk_action_name;
       $action = WDW_FM_Library(self::PLUGIN)->get($block_action, -1, 'sanitize_key');
+      if ( ( $task != 'add' && $task != 'edit' && $task != 'display' && $task != 'form_options' && $task != 'email_options' && $task != 'display_options' && $task != 'form_layout' && $task != 'fm_live_search' ) || $action != -1 ) {
+        check_admin_referer(WDFMInstance(self::PLUGIN)->nonce, WDFMInstance(self::PLUGIN)->nonce);
+      }
       if ( $action != -1 ) {
         $this->$block_action( $action );
       }
@@ -145,7 +145,7 @@ class FMControllerManage_fm extends FMAdminController {
    */
   public function bulk_action( $task = '' ) {
     $message = 0;
-    if ( method_exists($this, $task) ) {
+    if ( isset( $this->actions[ $task ] ) && method_exists( $this, $task ) ) {
       $check = WDW_FM_Library(self::PLUGIN)->get('check', '');
       if ( !empty($check) ) {
         $successfully_updated = 0;

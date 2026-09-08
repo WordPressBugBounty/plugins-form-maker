@@ -81,11 +81,12 @@ class FMControllerSubmissions_fm extends FMAdminController {
     $id = WDW_FM_Library(self::PLUGIN)->get('current_id', 0, 'intval');
     $task = WDW_FM_Library(self::PLUGIN)->get('task', '', 'sanitize_key');
     if ( method_exists($this, $task) ) {
-      if ( $task != 'display' ) {
-        check_admin_referer(WDFMInstance(self::PLUGIN)->nonce, WDFMInstance(self::PLUGIN)->nonce);
-      }
 		  $block_action = $this->bulk_action_name;
 		  $action = WDW_FM_Library(self::PLUGIN)->get($block_action, -1, 'sanitize_key');
+      // Require a nonce for mutating bulk actions even when task=display.
+      if ( $task != 'display' || $action != -1 ) {
+        check_admin_referer(WDFMInstance(self::PLUGIN)->nonce, WDFMInstance(self::PLUGIN)->nonce);
+      }
 		  if ( $action != -1 ) {
 			$this->$block_action( $action );
 		  }
@@ -107,7 +108,8 @@ class FMControllerSubmissions_fm extends FMAdminController {
     $message = 0;
     $paged = WDW_FM_Library(self::PLUGIN)->get('current_page', 1, 'intval');
     $form_id = WDW_FM_Library(self::PLUGIN)->get('form_id', 0, 'intval');
-    if ( method_exists($this, $task) ) {
+    // Only allow known bulk actions from the allowlist.
+    if ( isset( $this->actions[ $task ] ) && method_exists( $this, $task ) ) {
       $check = WDW_FM_Library(self::PLUGIN)->get('check', '');
       if ( !empty($check) ) {
         $successfully_updated = 0;
@@ -131,7 +133,12 @@ class FMControllerSubmissions_fm extends FMAdminController {
       'paged' => $paged,
       ($message === 2 ? 'message' : 'msg') => $message,
     );
-    $delete_keys = array_merge($url_args, array( 'form_id' => '', WDFMInstance(self::PLUGIN)->nonce => '' ));
+    // Drop bulk_action and other control params so they are not reflected into the redirect URL.
+    $delete_keys = array_merge($url_args, array(
+      'form_id' => '',
+      'bulk_action' => '',
+      WDFMInstance(self::PLUGIN)->nonce => '',
+    ));
     $new_url_args = WDW_FM_Library(self::PLUGIN)->array_remove_keys($_GET, $delete_keys);
     $redirect = add_query_arg(array_merge($url_args, $new_url_args), admin_url('admin.php'));
     WDW_FM_Library(self::PLUGIN)->fm_redirect($redirect, FALSE);
