@@ -2306,7 +2306,7 @@ class FMViewForm_maker {
    */
   function type_checkbox( $params = array(), $row = array(), $form_id = 0, $id1 = 0, $type = '', $param = array() ) {
     //ToDo custom_fields add to params array key next version.
-    $custom_fields = WDW_FM_Library::get_custom_fields();
+    $custom_fields = WDW_FM_Library::merge_dynamic_choice_fields( $param );
     $select_data_from_db = TRUE;
     if ( !empty($param['reset_fields']) && in_array($id1, $param['reset_fields']) ) {
       $select_data_from_db = FALSE;
@@ -2540,7 +2540,7 @@ class FMViewForm_maker {
    */
   function type_radio( $params = array(), $row = array(), $form_id = 0, $id1 = 0, $type = '', $param = array() ) {
     //ToDo custom_fields add to params array key next version.
-    $custom_fields = WDW_FM_Library::get_custom_fields();
+    $custom_fields = WDW_FM_Library::merge_dynamic_choice_fields( $param );
     $select_data_from_db = TRUE;
     if ( !empty($param['reset_fields']) && in_array($id1, $param['reset_fields']) ) {
       $select_data_from_db = FALSE;
@@ -2757,7 +2757,7 @@ class FMViewForm_maker {
    */
   function type_own_select( $params = array(), $row = array(), $form_id = 0, $id1 = 0, $type = '', $param = array() ) {
     //ToDo custom_fields add to params array key next version.
-    $custom_fields = WDW_FM_Library::get_custom_fields();
+    $custom_fields = WDW_FM_Library::merge_dynamic_choice_fields( $param );
     $select_data_from_db = TRUE;
     if ( !empty($param['reset_fields']) && in_array($id1, $param['reset_fields']) ){
       $select_data_from_db = FALSE;

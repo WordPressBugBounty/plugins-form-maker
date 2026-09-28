@@ -312,15 +312,7 @@ class FMControllerForm_maker {
           $param['label'] = $label;
           $param['attributes'] = '';
           $param['reset_fields'] = $reset_fields;
-          foreach ( $row_values as $val ) {
-            list($input_id, $input_val) = explode('|', $val);
-            $str_key = '{'. $input_id .'}';
-            if ( strpos($params, $str_key) > -1 ) {
-              // Keep placeholder values as quoted SQL literals; downstream query builder re-binds safely.
-              $safe_val = $wpdb->prepare( '%s', $input_val );
-              $params = str_replace( $str_key, $safe_val, $params );
-            }
-          }
+          $param['field_placeholders'] = WDW_FM_Library::collect_reload_field_placeholders( $params, $row_values );
           // Prevent attacker-controlled dynamic method calls.
           if ( !preg_match('/^type_[a-zA-Z0-9_]+$/', $type) ) {
             continue;

@@ -1648,7 +1648,9 @@ class FMModelForm_maker {
             break;
           }
           case "type_mark_map": {
-            $value = WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $i . "_long" . $id ) . '***map***' . WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $i . "_lat" . $id );
+            $longitude = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $i . "_long" . $id ), 'long' );
+            $latitude = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $i . "_lat" . $id ), 'lat' );
+            $value = $longitude . '***map***' . $latitude;
             $key_values[$i] = $value;
             break;
           }
@@ -3693,8 +3695,8 @@ class FMModelForm_maker {
               break;
             }
             case "type_mark_map": {
-              $longitude = WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $i . "_long" . $id, NULL, 'esc_html' );
-              $latitude = WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $i . "_lat" . $id, NULL, 'esc_html');
+              $longitude = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $i . "_long" . $id, NULL, 'esc_html' ), 'long' );
+              $latitude = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $i . "_lat" . $id, NULL, 'esc_html' ), 'lat' );
               if ( isset( $longitude ) && $this->empty_field( $longitude, $row->mail_emptyfields ) ) {
                 $element ='Longitude:' . $element . ' Latitude:' . $latitude;
                 $list = $list . '<tr valign="top"><td ' . $td_style . '>' . $element_label . '</td><td ' . $td_style . '>Longitude:' . $longitude . '<br/>Latitude:' . $latitude . '</td></tr>';
@@ -4790,7 +4792,8 @@ class FMModelForm_maker {
         case "type_mark_map": {
           $element = WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $key . "_long" . $id, NULL, 'esc_html' );
           if ( isset( $element ) ) {
-            $new_value = 'Longitude:' . $element . '<br/>Latitude:' . WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $key . "_lat" . $id, "", 'esc_html' );
+            $element = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( $element, 'long' );
+            $new_value = 'Longitude:' . $element . '<br/>Latitude:' . WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( WDW_FM_Library(self::PLUGIN)->get( 'wdform_' . $key . "_lat" . $id, "", 'esc_html' ), 'lat' );
           }
           break;
         }

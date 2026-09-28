@@ -28,8 +28,8 @@ class FMControllerFormmakermapeditinpopup extends FMAdminController {
     // Set params for view.
     $params = array();
     $params['map_key'] = !empty($fm_settings['map_key']) ? '&key=' . $fm_settings['map_key'] : '';
-    $params['long'] = WDW_FM_Library(self::PLUGIN)->get('long', 0);
-    $params['lat'] = WDW_FM_Library(self::PLUGIN)->get('lat', 0);
+    $params['long'] = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( WDW_FM_Library(self::PLUGIN)->get('long', 0), 'long' );
+    $params['lat'] = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( WDW_FM_Library(self::PLUGIN)->get('lat', 0), 'lat' );
     $this->view->display($params);
   }
 }

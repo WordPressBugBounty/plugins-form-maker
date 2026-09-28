@@ -381,6 +381,9 @@ class WDW_FM_Library {
         $value = $default_value;
       }
     }
+    if ( is_array( $value ) ) {
+      $value = self::sanitize_request_keys( $value );
+    }
     if ( strpos('wdc_equation', $key) !== FALSE ) {
       if ( is_array($value) ) {
         array_walk_recursive($value, array( 'self', 'validate_data' ), $callback);
@@ -413,12 +416,44 @@ class WDW_FM_Library {
    */
   private static function validate_data(&$value, $key, $callback) {
     $value = stripslashes($value);
+    $value = self::strip_c0_controls( $value );
     if ( !empty($callback) && method_exists(__CLASS__, $callback) ) {
       $value = self::$callback($value);
     }
     else if (!empty($callback) && function_exists($callback)) {
       $value = $callback($value);
     }
+  }
+
+  /**
+   * Drop C0 controls (except tab) so form-feed / vertical-tab cannot act as SQL whitespace.
+   *
+   * @param mixed $value
+   * @return string
+   */
+  public static function strip_c0_controls( $value ) {
+    return preg_replace( '/[\x00-\x08\x0A-\x1F\x7F]/', '', (string) $value );
+  }
+
+  /**
+   * Sanitize array keys from request data (values are still walked separately).
+   *
+   * @param mixed $value
+   * @return mixed
+   */
+  public static function sanitize_request_keys( $value ) {
+    if ( ! is_array( $value ) ) {
+      return $value;
+    }
+    $out = array();
+    foreach ( $value as $key => $item ) {
+      $safe_key = preg_replace( '/[^A-Za-z0-9_|.\-]/', '', (string) $key );
+      if ( $safe_key === '' ) {
+        continue;
+      }
+      $out[ $safe_key ] = self::sanitize_request_keys( $item );
+    }
+    return $out;
   }
 
   /**
@@ -431,6 +466,50 @@ class WDW_FM_Library {
   public static function zero_or_one( $value = '' ) {
     $value = !empty($value) ? 1 : 0;
     return $value;
+  }
+
+  /**
+   * Keep only a finite numeric map coordinate within the valid geographic range.
+   *
+   * @param mixed  $value Raw longitude or latitude.
+   * @param string $axis  'long' (-180..180) or 'lat' (-90..90).
+   *
+   * @return string Numeric coordinate, or empty string when invalid.
+   */
+  public static function sanitize_map_coordinate( $value, $axis = 'long' ) {
+    if ( $value === NULL || $value === '' || is_array( $value ) || is_object( $value ) ) {
+      return '';
+    }
+    if ( is_string( $value ) ) {
+      $value = trim( $value );
+    }
+    $float = filter_var( $value, FILTER_VALIDATE_FLOAT );
+    if ( $float === FALSE || is_nan( $float ) || is_infinite( $float ) ) {
+      return '';
+    }
+    $min = ( $axis === 'lat' ) ? -90.0 : -180.0;
+    $max = ( $axis === 'lat' ) ? 90.0 : 180.0;
+    if ( $float < $min || $float > $max ) {
+      return '';
+    }
+
+    return (string) $float;
+  }
+
+  /**
+   * Encode a value as a quoted JavaScript string (JSON).
+   *
+   * @param mixed $value
+   *
+   * @return string Quoted JS string literal, including the surrounding quotes.
+   */
+  public static function js_string( $value ) {
+    $encoded = function_exists( 'wp_json_encode' ) ? wp_json_encode( (string) $value ) : json_encode( (string) $value );
+    if ( FALSE === $encoded || 'null' === $encoded ) {
+      return '""';
+    }
+
+    return $encoded;
   }
 
   /**
@@ -6160,6 +6239,59 @@ class WDW_FM_Library {
   }
 
   /**
+   * Collect reload-input field values whose {id} placeholders already exist in the stored template.
+   * Does not rewrite the template — values are bound later as prepared arguments.
+   *
+   * @param string $params_template Serialized field params (stored form definition).
+   * @param array  $row_values      Items of the form "id|value".
+   * @return array<string, string>
+   */
+  public static function collect_reload_field_placeholders( $params_template, $row_values ) {
+    $out = array();
+    $params_template = (string) $params_template;
+    if ( ! is_array( $row_values ) ) {
+      return $out;
+    }
+    foreach ( $row_values as $val ) {
+      $parts = explode( '|', (string) $val, 2 );
+      if ( count( $parts ) < 2 ) {
+        continue;
+      }
+      $input_id = preg_replace( '/[^A-Za-z0-9_]/', '', $parts[0] );
+      if ( $input_id === '' ) {
+        continue;
+      }
+      if ( strpos( $params_template, '{' . $input_id . '}' ) === false ) {
+        continue;
+      }
+      $out[ $input_id ] = self::strip_c0_controls( $parts[1] );
+    }
+    return $out;
+  }
+
+  /**
+   * Merge reload-input field placeholders into the Dynamic Choices custom-field map.
+   *
+   * @param array      $param View param bag (may include field_placeholders).
+   * @param array|null $base  Optional base map; defaults to get_custom_fields().
+   * @return array
+   */
+  public static function merge_dynamic_choice_fields( $param = array(), $base = null ) {
+    $fields = ( $base === null ) ? self::get_custom_fields() : (array) $base;
+    if ( ! is_array( $param ) || empty( $param['field_placeholders'] ) || ! is_array( $param['field_placeholders'] ) ) {
+      return $fields;
+    }
+    foreach ( $param['field_placeholders'] as $key => $value ) {
+      $key = preg_replace( '/[^A-Za-z0-9_]/', '', (string) $key );
+      if ( $key === '' || is_array( $value ) || is_object( $value ) ) {
+        continue;
+      }
+      $fields[ $key ] = self::strip_c0_controls( (string) $value );
+    }
+    return $fields;
+  }
+
+  /**
    * Prepare a Dynamic Choices WHERE template by binding custom field placeholders.
    *
    * @param string     $where_template Raw template (may include [ ], WHERE, {username}, %username%).
@@ -6176,8 +6308,8 @@ class WDW_FM_Library {
     $decoded = trim( html_entity_decode( (string) $where_template, ENT_QUOTES ) );
     $decoded = str_replace( array( '[', ']' ), '', $decoded );
     $decoded = trim( $decoded );
-    if ( preg_match( '/^where\s+/i', $decoded ) ) {
-      $decoded = trim( preg_replace( '/^where\s+/i', '', $decoded ) );
+    if ( preg_match( '/^where[ \t]+/i', $decoded ) ) {
+      $decoded = trim( preg_replace( '/^where[ \t]+/i', '', $decoded ) );
     }
     if ( $decoded === '' ) {
       return array( 'where' => '', 'binds' => array(), 'valid' => true );
@@ -6200,6 +6332,12 @@ class WDW_FM_Library {
     usort( $keys, function ( $a, $b ) {
       return strlen( $b ) - strlen( $a );
     } );
+    foreach ( $keys as $k ) {
+      if ( is_string( $custom_fields[ $k ] ) ) {
+        $custom_fields[ $k ] = self::strip_c0_controls( $custom_fields[ $k ] );
+      }
+    }
+
     $key_alt = array();
     foreach ( $keys as $k ) {
       $key_alt[] = preg_quote( $k, '/' );
@@ -6267,12 +6405,8 @@ class WDW_FM_Library {
       return array( 'where' => '', 'binds' => $binds, 'valid' => true );
     }
 
-    // Grammar: ident op %s ( (AND|OR) ident op %s )*
-    $ident = '`?[A-Za-z_][A-Za-z0-9_]*`?';
-    $op = '(?:=|<>|!=|<=|>=|<|>|LIKE)';
-    $cond = $ident . '\s*' . $op . '\s*%s';
-    $grammar = '/^' . $cond . '(?:\s+(?:AND|OR)\s+' . $cond . ')*$/i';
-    if ( ! preg_match( $grammar, $out_trim ) ) {
+    // Grammar: ident op %s ( (AND|OR) ident op %s )* with space/tab separators only (not PCRE \s).
+    if ( ! self::dynamic_where_is_grammatical( $out_trim ) ) {
       return array( 'where' => '', 'binds' => array(), 'valid' => false );
     }
 
@@ -6282,6 +6416,22 @@ class WDW_FM_Library {
     }
 
     return array( 'where' => $out_trim, 'binds' => $binds, 'valid' => true );
+  }
+
+  /**
+   * True when a bound WHERE string is ident op %s connected by AND/OR with space or tab only.
+   *
+   * @param string $where
+   * @return bool
+   */
+  private static function dynamic_where_is_grammatical( $where ) {
+    $ident = '`?[A-Za-z_][A-Za-z0-9_]*`?';
+    $op = '(?:=|<>|!=|<=|>=|<|>|LIKE)';
+    $ws = '[ \\t]+';
+    $ws0 = '[ \\t]*';
+    $cond = $ident . $ws0 . $op . $ws0 . '%s';
+    $grammar = '/^' . $cond . '(?:' . $ws . '(?:AND|OR)' . $ws . $cond . ')*$/i';
+    return (bool) preg_match( $grammar, $where );
   }
 
   /**
@@ -6773,8 +6923,8 @@ class WDW_FM_Library {
     $safe_table = ( strpos( $table, '.' ) === false ) ? '`' . $table . '`' : '`' . str_replace( '.', '`.`', $table ) . '`';
 
     $decoded_where = trim( html_entity_decode( (string) $where, ENT_QUOTES ) );
-    if ( preg_match( '/^where\s+/i', $decoded_where ) ) {
-      $decoded_where = trim( preg_replace( '/^where\s+/i', '', $decoded_where ) );
+    if ( preg_match( '/^where[ \t]+/i', $decoded_where ) ) {
+      $decoded_where = trim( preg_replace( '/^where[ \t]+/i', '', $decoded_where ) );
     }
 
     $binds = array();
@@ -6782,12 +6932,8 @@ class WDW_FM_Library {
     if ( $decoded_where !== '' ) {
       if ( ! empty( $extra_binds ) ) {
         // Caller already bound placeholders; re-validate grammar only (no quote re-extraction).
-        $ident = '`?[A-Za-z_][A-Za-z0-9_]*`?';
-        $op = '(?:=|<>|!=|<=|>=|<|>|LIKE)';
-        $cond = $ident . '\s*' . $op . '\s*%s';
-        $grammar = '/^' . $cond . '(?:\s+(?:AND|OR)\s+' . $cond . ')*$/i';
         if ( preg_match( '/(;|--|#|\/\*|\')/', $decoded_where )
-          || ! preg_match( $grammar, $decoded_where )
+          || ! self::dynamic_where_is_grammatical( $decoded_where )
           || substr_count( $decoded_where, '%s' ) !== count( $extra_binds ) ) {
           return array( 'query' => '', 'binds' => array() );
         }

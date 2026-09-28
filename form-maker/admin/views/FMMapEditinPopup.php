@@ -12,8 +12,10 @@ class FMViewFrommapeditinpopup extends FMAdminView {
   public function display( $params = array() ) {
     wp_print_scripts('google-maps');
     wp_print_scripts(WDFMInstance(self::PLUGIN)->handle_prefix . '-gmap_form');
-    $long = $params['long'];
-    $lat  = $params['lat'];
+    $long = isset( $params['long'] ) ? $params['long'] : '';
+    $lat  = isset( $params['lat'] ) ? $params['lat'] : '';
+    $long = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( $long, 'long' );
+    $lat  = WDW_FM_Library(self::PLUGIN)->sanitize_map_coordinate( $lat, 'lat' );
     ?>
     <table style="margin:0px; padding:0px">
       <tr>
@@ -29,10 +31,10 @@ class FMViewFrommapeditinpopup extends FMAdminView {
         <td><input type="text" id="latval0" style="border:0px; background:none" size="80" readonly /></td>
       </tr>
     </table>
-    <div id="0_elementform_id_temp" long="<?php echo $long ?>" center_x="<?php echo $long ?>" center_y="<?php echo $lat ?>" lat="<?php echo $lat ?>" zoom="8" info="" style="width:600px; height:400px; "></div>
+    <div id="0_elementform_id_temp" long="<?php echo esc_attr( $long ); ?>" center_x="<?php echo esc_attr( $long ); ?>" center_y="<?php echo esc_attr( $lat ); ?>" lat="<?php echo esc_attr( $lat ); ?>" zoom="8" info="" style="width:600px; height:400px; "></div>
     <script>
       if_gmap_init("0");
-      add_marker_on_map(0, 0, "<?php echo $long; ?>", "<?php echo $lat; ?>", "");
+      add_marker_on_map(0, 0, <?php echo WDW_FM_Library(self::PLUGIN)->js_string( $long ); ?>, <?php echo WDW_FM_Library(self::PLUGIN)->js_string( $lat ); ?>, "");
     </script>
     <?php
 
