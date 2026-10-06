@@ -3,7 +3,7 @@ Contributors: webdorado,10web,wdsupport,formmakersupport
 Tags:  form, form builder, contact form, survey, form manager
 Requires at least: 4.6
 Tested up to: 7.0
-Stable tag: 1.15.48
+Stable tag: 1.15.49
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -557,6 +557,9 @@ Where **{{field_id}}** is the ID of the field you wish to prefill. Also, **{{par
 
 
 == Changelog ==
+
+= 1.15.49 =
+* Fixed: Security issues (reflected XSS via fm_reload_input array keys; dynamic choice WHERE values are bound parameters).
 
 = 1.15.48 =
 * Fixed: Security issues (stored XSS via Mark on Map; SQL injection in fm_reload_input).

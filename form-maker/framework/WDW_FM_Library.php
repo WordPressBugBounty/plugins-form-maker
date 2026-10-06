@@ -6299,25 +6299,7 @@ class WDW_FM_Library {
    * @return array{ where: string, binds: array<int, string>, valid: bool }
    */
   public static function prepare_dynamic_where_with_custom_fields( $where_template, $custom_fields = null ) {
-    if ( $custom_fields === null ) {
-      $custom_fields = self::get_custom_fields();
-    }
-    if ( ! is_array( $custom_fields ) ) {
-      $custom_fields = array();
-    }
-    $decoded = trim( html_entity_decode( (string) $where_template, ENT_QUOTES ) );
-    $decoded = str_replace( array( '[', ']' ), '', $decoded );
-    $decoded = trim( $decoded );
-    if ( preg_match( '/^where[ \t]+/i', $decoded ) ) {
-      $decoded = trim( preg_replace( '/^where[ \t]+/i', '', $decoded ) );
-    }
-    if ( $decoded === '' ) {
-      return array( 'where' => '', 'binds' => array(), 'valid' => true );
-    }
-    if ( preg_match( '/(;|--|#|\/\*)/', $decoded ) ) {
-      return array( 'where' => '', 'binds' => array(), 'valid' => false );
-    }
-    return self::bind_dynamic_where_clause( $decoded, $custom_fields );
+    return self::bind_dynamic_where_clause( $where_template, $custom_fields );
   }
 
   /**
@@ -6327,7 +6309,26 @@ class WDW_FM_Library {
    * @param array  $custom_fields
    * @return array{ where: string, binds: array<int, string>, valid: bool }
    */
-  private static function bind_dynamic_where_clause( $where, $custom_fields ) {
+  public static function bind_dynamic_where_clause( $where, $custom_fields = null ) {
+    if ( $custom_fields === null ) {
+      $custom_fields = self::get_custom_fields();
+    }
+    if ( ! is_array( $custom_fields ) ) {
+      $custom_fields = array();
+    }
+    $where = trim( html_entity_decode( (string) $where, ENT_QUOTES ) );
+    $where = str_replace( array( '[', ']' ), '', $where );
+    $where = trim( $where );
+    if ( preg_match( '/^where[ \t]+/i', $where ) ) {
+      $where = trim( preg_replace( '/^where[ \t]+/i', '', $where ) );
+    }
+    if ( $where === '' ) {
+      return array( 'where' => '', 'binds' => array(), 'valid' => true );
+    }
+    if ( preg_match( '/(;|--|#|\/\*)/', $where ) ) {
+      return array( 'where' => '', 'binds' => array(), 'valid' => false );
+    }
+
     $keys = array_keys( $custom_fields );
     usort( $keys, function ( $a, $b ) {
       return strlen( $b ) - strlen( $a );

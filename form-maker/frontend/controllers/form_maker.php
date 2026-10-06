@@ -39,12 +39,15 @@ class FMControllerForm_maker {
    */
   public function execute( $id = 0, $type = 'embedded' ) {
     $action = WDW_FM_Library(self::PLUGIN)->get('action');
-    if ( method_exists($this, $action) ) {
-      $this->$action();
+    $allowed_actions = array( 'fm_reload_input' );
+    if ( is_string( $action ) && in_array( $action, $allowed_actions, true ) && method_exists( $this, $action ) ) {
+      $nonce = WDW_FM_Library(self::PLUGIN)->get( 'nonce' );
+      if ( wp_verify_nonce( $nonce, 'fm_ajax_nonce' ) ) {
+        $this->$action();
+        return;
+      }
     }
-    else {
-      return $this->display($id, $type);
-    }
+    return $this->display( $id, $type );
   }
 
   /**
@@ -254,7 +257,7 @@ class FMControllerForm_maker {
     $form_id  = WDW_FM_Library::get('form_id','','intval');
     $inputs = WDW_FM_Library::get('inputs');
     $json = array();
-    if ( !empty($form_id) && !empty($inputs) ) {
+    if ( !empty($form_id) && is_array( $inputs ) ) {
       $prepare = array();
       $prepare[] = $form_id;
       $where_in_prepare = '%d';
@@ -272,7 +275,13 @@ class FMControllerForm_maker {
       }
       $query = 'SELECT * FROM ' . $wpdb->prefix . 'formmaker WHERE id = %d ' . (!WDFMInstance(self::PLUGIN)->is_free ? '' : 'AND id' . (WDFMInstance(self::PLUGIN)->is_free == 1 ? ' NOT ' : ' ') . 'IN (' . $where_in_prepare . ')');
       $row = $wpdb->get_row( $wpdb->prepare( $query , $prepare ) );
+      if ( ! is_object( $row ) ) {
+        wp_send_json( array( 'error' => 1 ) );
+      }
       $row = WDW_FM_Library::convert_json_options_to_old( $row, 'form_options' );
+      if ( ! is_object( $row ) || ! isset( $row->form_fields ) ) {
+        wp_send_json( array( 'error' => 1 ) );
+      }
 
       $id1s = array();
       $types = array();
@@ -293,7 +302,15 @@ class FMControllerForm_maker {
       $ids = array();
       $reset_fields = array();
       foreach ( $inputs as $input_key => $input_val ) {
+          if ( ! is_string( $input_key ) || ! preg_match( '/^\d+\|type_[a-z_]+\|\d+$/', $input_key ) ) {
+            continue;
+          }
+          if ( is_array( $input_val ) || is_object( $input_val ) ) {
+            continue;
+          }
           list( $row_id, $type, $input_id) = explode('|', $input_key);
+          $row_id = (int) $row_id;
+          $input_id = (int) $input_id;
           $key = $row_id . '|'. $type;
           $ids[$key][] = $input_id.'|'.$input_val;
 
@@ -304,8 +321,12 @@ class FMControllerForm_maker {
       if ( !empty($ids) ) {
         foreach ( $ids as $row_key => $row_values ) {
           list($row_id, $type) = explode('|', $row_key);
+          $row_id = (int) $row_id;
 
           $index = array_search($row_id, $id1s);
+          if ( false === $index || ! isset( $labels[ $index ], $paramss[ $index ] ) ) {
+            continue;
+          }
           $label = $labels[$index];
           $params = $paramss[$index];
           $param = array();
@@ -313,8 +334,7 @@ class FMControllerForm_maker {
           $param['attributes'] = '';
           $param['reset_fields'] = $reset_fields;
           $param['field_placeholders'] = WDW_FM_Library::collect_reload_field_placeholders( $params, $row_values );
-          // Prevent attacker-controlled dynamic method calls.
-          if ( !preg_match('/^type_[a-zA-Z0-9_]+$/', $type) ) {
+          if ( !preg_match('/^type_[a-z_]+$/', $type) ) {
             continue;
           }
           if ( !is_callable( array($this->view, $type) ) ) {
@@ -328,6 +348,6 @@ class FMControllerForm_maker {
     } else {
       $json['error'] = 1;
     }
-    echo json_encode($json); exit;
+    wp_send_json( $json );
     }
 }
