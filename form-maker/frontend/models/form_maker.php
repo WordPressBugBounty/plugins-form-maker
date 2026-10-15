@@ -16,24 +16,64 @@ class FMModelForm_maker {
   /**
    * Detects whether an uploaded file is (or contains) SVG/XML markup, regardless of
    * what mime_content_type() reports for it, since that check can be bypassed by SVGs
-   * lacking a recognizable XML prolog.
+   * lacking a recognizable XML prolog or by whitespace-padding past a partial read.
    *
    * @param string $file_path
    *
-   * @return bool
+   * @return bool TRUE if the file should be rejected as SVG.
    */
   private function is_uploaded_file_svg( $file_path ) {
+    $ext = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
+    if ( in_array( $ext, array( 'svg', 'svgz' ), TRUE ) ) {
+      return TRUE;
+    }
+
     if ( function_exists( 'mime_content_type' ) ) {
       $mime_type = @mime_content_type( $file_path );
       if ( $mime_type && stripos( $mime_type, 'svg' ) !== FALSE ) {
         return TRUE;
       }
     }
-    $contents = @file_get_contents( $file_path, FALSE, NULL, 0, 8192 );
+
+    if ( class_exists( 'finfo', FALSE ) ) {
+      $finfo = @new finfo( FILEINFO_MIME_TYPE );
+      if ( $finfo ) {
+        $mime_type = @$finfo->file( $file_path );
+        if ( $mime_type && stripos( $mime_type, 'svg' ) !== FALSE ) {
+          return TRUE;
+        }
+      }
+    }
+
+    // Read the whole file (field max-size already caps uploads). A partial 8KB window
+    // can be bypassed by leading whitespace that pushes <svg outside the scan range.
+    $contents = @file_get_contents( $file_path );
     if ( $contents === FALSE ) {
       return TRUE;
     }
-    return (bool) preg_match( '/<\s*svg[\s>]/i', $contents );
+
+    // Match <svg ...>, <svg/>, and namespace-prefixed roots such as <svg:svg>.
+    if ( preg_match( '/<\s*svg(?:\s|:|>|\/)/i', $contents ) ) {
+      return TRUE;
+    }
+
+    if ( class_exists( 'DOMDocument', FALSE ) ) {
+      $previous = libxml_use_internal_errors( TRUE );
+      $dom = new DOMDocument();
+      $loaded = @$dom->loadXML( $contents, LIBXML_NONET );
+      libxml_clear_errors();
+      libxml_use_internal_errors( $previous );
+      if ( $loaded && $dom->documentElement ) {
+        if ( strcasecmp( $dom->documentElement->localName, 'svg' ) === 0 ) {
+          return TRUE;
+        }
+        if ( $dom->getElementsByTagNameNS( 'http://www.w3.org/2000/svg', 'svg' )->length > 0 ) {
+          return TRUE;
+        }
+      }
+    }
+
+    return FALSE;
   }
 
   /**
