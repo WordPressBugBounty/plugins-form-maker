@@ -613,25 +613,38 @@ class  FMViewSubmissions_fm extends FMAdminView {
               }
 							$not_label = TRUE;
 							for ( $g = 0; $g < count($temp); $g++ ) {
-								if ( !isset($sorted_label_types[$g]) ) {
-							      continue;
-								}
 								$styleStr = $this->model->hide_or_not($lists['hide_label_list'], $sorted_labels_id[$h]);
-								$temp[$g]->element_value = $sorted_label_types[$g] != 'type_file_upload' ? esc_html($temp[$g]->element_value) : $temp[$g]->element_value;
+								// Escape by this row's own field type (via element_label), not by $g.
+								// disabled_fields can drop rows so $sorted_label_types[$g] no longer matches.
+								$row_label_pos = array_search( $temp[$g]->element_label, $sorted_labels_id );
+								$row_type = ( FALSE !== $row_label_pos && isset( $sorted_label_types[ $row_label_pos ] ) )
+									? $sorted_label_types[ $row_label_pos ]
+									: '';
+								if ( $row_type !== 'type_file_upload' ) {
+									$temp[$g]->element_value = esc_html( $temp[$g]->element_value );
+								}
 								if ( $temp[$g]->element_label == $sorted_labels_id[$h] ) {
 								  if ( strpos($temp[$g]->element_value, "***map***") ) {
 										$map_params = explode('***map***', $temp[$g]->element_value);
-										?>
-										<td id="<?php echo $sorted_labels_id[$h]; ?>_fc" class="table_large_col <?php echo $sorted_labels_id[$h]; ?>_fc sub-align" <?php echo $styleStr; ?> data-colname="<?php _e('Show on Map', WDFMInstance(self::PLUGIN)->prefix);?>">
-											<a class="thickbox-preview" href="<?php echo add_query_arg(array(
+										// Restrict to numeric coordinates and URL-encode before add_query_arg.
+										// WP build_query does not encode new args; HTML-escaped "&amp;" in long/lat
+										// would otherwise become extra admin-ajax parameters in the browser.
+										$map_long = isset( $map_params[0] ) ? html_entity_decode( $map_params[0], ENT_QUOTES, 'UTF-8' ) : '';
+										$map_lat  = isset( $map_params[1] ) ? html_entity_decode( $map_params[1], ENT_QUOTES, 'UTF-8' ) : '';
+										$map_long = is_numeric( $map_long ) ? (string) (float) $map_long : '0';
+										$map_lat  = is_numeric( $map_lat ) ? (string) (float) $map_lat : '0';
+										$map_href = add_query_arg(array(
 																										 'action' => 'FormMakerMapEditinPopup' . WDFMInstance(self::PLUGIN)->plugin_postfix,
-																										 'long' => $map_params[0],
-																										 'lat' => $map_params[1],
+																										 'long' => rawurlencode( $map_long ),
+																										 'lat' => rawurlencode( $map_lat ),
 																										 'width' => '620',
 																										 'height' => '550',
 																										 'nonce' => $this->fm_nonce,
 																										 'TB_iframe' => '1',
-																									 ), admin_url('admin-ajax.php')); ?>" title="<?php _e("Show on Map", WDFMInstance(self::PLUGIN)->prefix); ?>"><?php _e("Show on Map", WDFMInstance(self::PLUGIN)->prefix); ?></a>
+																									 ), admin_url('admin-ajax.php'));
+										?>
+										<td id="<?php echo $sorted_labels_id[$h]; ?>_fc" class="table_large_col <?php echo $sorted_labels_id[$h]; ?>_fc sub-align" <?php echo $styleStr; ?> data-colname="<?php _e('Show on Map', WDFMInstance(self::PLUGIN)->prefix);?>">
+											<a class="thickbox-preview" href="<?php echo esc_url( $map_href ); ?>" title="<?php _e("Show on Map", WDFMInstance(self::PLUGIN)->prefix); ?>"><?php _e("Show on Map", WDFMInstance(self::PLUGIN)->prefix); ?></a>
 										</td>
 									<?php
 								  }

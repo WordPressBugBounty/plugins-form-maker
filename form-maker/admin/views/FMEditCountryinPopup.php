@@ -68,7 +68,7 @@ class FMViewFromeditcountryinpopup extends FMAdminView {
     <script>
       var countries = '<?php echo addslashes(json_encode(WDW_FM_Library(self::PLUGIN)->get_countries())); ?>';
       countries = JSON.parse(countries);
-      var select_ = window.parent.document.getElementById('<?php echo $field_id ?>_elementform_id_temp');
+      var select_ = window.parent.document.getElementById('<?php echo esc_js( $field_id ); ?>_elementform_id_temp');
       var n = select_.childNodes.length;
       var saved_list = []
       for ( var i = 0; i < n; i++ ) {

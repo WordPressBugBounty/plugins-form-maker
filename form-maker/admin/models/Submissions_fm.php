@@ -703,11 +703,22 @@ class FMModelSubmissions_fm extends FMAdminModel {
     $new_filename = str_replace("***star_rating***", '', $element_value);
     $stars = "";
     $new_filename = explode('***', $new_filename);
-    for ( $j = 0; $j < $new_filename[1]; $j++ ) {
-      $stars .= '<img id="' . $element_label . '_star_' . $j . '" src="' . WDFMInstance(self::PLUGIN)->plugin_url . '/images/star_' . $new_filename[2] . '.png?ver=' . WDFMInstance(self::PLUGIN)->plugin_version . '" /> ';
+    $star_max = ( isset( $new_filename[0] ) && is_numeric( $new_filename[0] ) ) ? (int) $new_filename[0] : 0;
+    $star_filled = ( isset( $new_filename[1] ) && is_numeric( $new_filename[1] ) ) ? (int) $new_filename[1] : 0;
+    $star_style = isset( $new_filename[2] ) ? (string) $new_filename[2] : '';
+    // Allowed colour tokens only (star_yellow.png, star_red.png, …).
+    if ( ! preg_match( '/^(yellow|red|green|blue)$/', $star_style ) ) {
+      $star_style = 'yellow';
     }
-    for ( $k = $new_filename[1]; $k < $new_filename[0]; $k++ ) {
-      $stars .= '<img id="' . $element_label . '_star_' . $k . '" src="' . WDFMInstance(self::PLUGIN)->plugin_url . '/images/star.png?ver=' . WDFMInstance(self::PLUGIN)->plugin_version . '" /> ';
+    $element_label_attr = esc_attr( $element_label );
+    $star_style_attr = esc_attr( $star_style );
+    $plugin_url = esc_url( WDFMInstance(self::PLUGIN)->plugin_url );
+    $plugin_ver = esc_attr( WDFMInstance(self::PLUGIN)->plugin_version );
+    for ( $j = 0; $j < $star_filled; $j++ ) {
+      $stars .= '<img id="' . $element_label_attr . '_star_' . $j . '" src="' . $plugin_url . '/images/star_' . $star_style_attr . '.png?ver=' . $plugin_ver . '" /> ';
+    }
+    for ( $k = $star_filled; $k < $star_max; $k++ ) {
+      $stars .= '<img id="' . $element_label_attr . '_star_' . $k . '" src="' . $plugin_url . '/images/star.png?ver=' . $plugin_ver . '" /> ';
     }
     array_push($view_star_rating_array, $stars);
 
